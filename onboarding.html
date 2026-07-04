@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Mentally Prepare - Editorial</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #F9F8F4;}
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+
+/* ════════════════════════════════════════════
+   MENTALLY PREPARE — Editorial Onboarding
+   Classy, elegant, non-AI aesthetic
+════════════════════════════════════════════ */
+
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap');
+
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+
+:root{
+  --bg:#F9F8F4;
+  --surface:#FFFFFF;
+  --text:#2B2A27;
+  --muted:#7A7975;
+  --dim:#B8B7B2;
+  --border:#E6E4DF;
+  --primary:#2C3E35; /* Deep forest green */
+  --primary-hover:#1F2D26;
+  --accent:#D1C2A3; /* Elegant warm sand/gold */
+  --serif:'Cormorant Garamond',Georgia,serif;
+  --sans:'DM Sans',sans-serif;
+}
+
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hidden;}
+
+/* ── WRAP ── */
+.ob-wrap{
+  width:100%;max-width:430px;height:100svh;
+  margin:0 auto;position:relative;overflow:hidden;
+  background:var(--bg);
+}
+
+/* Analog Grain */
+.ob-wrap::after{
+  content:'';position:absolute;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:9999;
+}
+
+/* ── SCREEN TRANSITIONS ── */
+.ob-screen{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  z-index:1;background:var(--bg);
+}
+.ob-screen.enter  {animation:screenEnter 0.8s cubic-bezier(0.2,0.8,0.2,1) both;}
+.ob-screen.exit   {animation:screenExit  0.5s cubic-bezier(0.4,0,0.2,1) both;}
+.ob-screen.enter-back {animation:screenEnterBack 0.8s cubic-bezier(0.2,0.8,0.2,1) both;}
+.ob-screen.exit-back  {animation:screenExitBack  0.5s cubic-bezier(0.4,0,0.2,1) both;}
+
+@keyframes screenEnter     {from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
+@keyframes screenExit      {from{opacity:1;transform:none;}to{opacity:0;transform:translateY(-12px);}}
+@keyframes screenEnterBack {from{opacity:0;transform:translateY(-12px);}to{opacity:1;transform:none;}}
+@keyframes screenExitBack  {from{opacity:1;transform:none;}to{opacity:0;transform:translateY(12px);}}
+
+/* ── STAGGER CHILDREN ── */
+.s0{animation:fadeRise 0.9s cubic-bezier(0.2,0.8,0.2,1) 0.1s both;}
+.s1{animation:fadeRise 0.9s cubic-bezier(0.2,0.8,0.2,1) 0.2s both;}
+.s2{animation:fadeRise 0.9s cubic-bezier(0.2,0.8,0.2,1) 0.3s both;}
+.s3{animation:fadeRise 0.9s cubic-bezier(0.2,0.8,0.2,1) 0.4s both;}
+.s4{animation:fadeRise 0.9s cubic-bezier(0.2,0.8,0.2,1) 0.5s both;}
+.s5{animation:fadeRise 0.9s cubic-bezier(0.2,0.8,0.2,1) 0.6s both;}
+@keyframes fadeRise{from{opacity:0;transform:translateY(15px);}to{opacity:1;transform:none;}}
+
+/* ── TYPOGRAPHY ── */
+.eye{font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);}
+.serif{font-family:var(--serif);}
+.h1{font-family:var(--serif);font-size:48px;font-weight:400;line-height:1.05;letter-spacing:-0.02em;color:var(--text);}
+.h2{font-family:var(--serif);font-size:38px;font-weight:300;line-height:1.1;letter-spacing:-0.01em;color:var(--text);}
+.h3{font-family:var(--serif);font-size:26px;font-weight:400;line-height:1.2;color:var(--text);}
+.body{font-family:var(--sans);font-size:15px;color:var(--muted);line-height:1.7;}
+.italic{font-style:italic;}
+
+/* ── PROGRESS WORM ── */
+.progress-wrap{padding:28px 32px 0;}
+.worm-track{height:1px;background:var(--border);width:100%;position:relative;}
+.worm-fill{height:100%;background:var(--text);transition:width 0.6s cubic-bezier(0.2,0.8,0.2,1);}
+
+/* ── BUTTONS ── */
+.btn-wrap{padding:0 32px;}
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:12px;
+  border:none;cursor:pointer;
+  transition:all 0.4s ease;
+  -webkit-tap-highlight-color:transparent;
+  width:100%;
+}
+.btn-p{
+  background:var(--primary);color:#F9F8F4;
+  font-family:var(--serif);font-size:20px;font-style:italic;
+  padding:20px 32px;
+  box-shadow:0 8px 24px rgba(44,62,53,0.12);
+}
+.btn-p:hover{background:var(--primary-hover);transform:translateY(-2px);box-shadow:0 12px 32px rgba(44,62,53,0.18);}
+.btn-p:active{transform:translateY(0);box-shadow:0 4px 12px rgba(44,62,53,0.08);}
+.btn-p:disabled{opacity:0.4;pointer-events:none;box-shadow:none;}
+
+.btn-g{
+  background:transparent;border:1px solid var(--border);
+  color:var(--text);font-family:var(--sans);font-size:12px;
+  font-weight:500;text-transform:uppercase;letter-spacing:0.05em;
+  padding:14px 24px;border-radius:100px;
+}
+.btn-g:hover{background:var(--surface);border-color:var(--dim);}
+
+.btn-sm{
+  background:transparent;border:none;color:var(--muted);
+  font-family:var(--sans);font-size:11px;padding:8px;
+  cursor:pointer;transition:color 0.3s;
+  text-transform:uppercase;letter-spacing:0.1em;
+}
+.btn-sm:hover{color:var(--text);}
+.arrow-r{display:inline-block;transition:transform 0.4s;font-style:normal;}
+.btn-p:hover .arrow-r{transform:translateX(5px);}
+
+/* ── CARDS & CHOICES ── */
+.choice{
+  background:var(--surface);border:1px solid var(--border);
+  padding:20px 24px;cursor:pointer;transition:all 0.3s ease;
+  text-align:left;color:var(--text);font-size:15px;
+  line-height:1.5;width:100%;position:relative;
+}
+.choice:hover{border-color:var(--dim);box-shadow:0 4px 16px rgba(0,0,0,0.03);transform:translateY(-1px);}
+.choice.picked{
+  background:var(--primary);color:#fff;border-color:var(--primary);
+  box-shadow:0 8px 24px rgba(44,62,53,0.15);
+}
+.choice.picked .ch-sub{color:rgba(255,255,255,0.7);}
+
+.feat-row{display:flex;gap:16px;align-items:flex-start;padding:16px 0;border-bottom:1px solid var(--border);}
+.feat-row:last-child{border-bottom:none;}
+.feat-no{font-family:var(--serif);font-size:18px;font-style:italic;color:var(--accent);min-width:24px;display:inline-block;}
+
+/* ── INPUT ── */
+.name-input{
+  width:100%;background:transparent;
+  border:none;border-bottom:1px solid var(--dim);
+  padding:16px 0;color:var(--text);
+  font-family:var(--serif);font-size:36px;font-style:italic;
+  outline:none;transition:border-color 0.3s;letter-spacing:-0.01em;
+  border-radius:0;
+}
+.name-input:focus{border-color:var(--primary);}
+.name-input::placeholder{color:var(--dim);font-style:italic;}
+
+/* ── MINIMAL VISUALS ── */
+.art-box{
+  width:100%;height:320px;position:relative;
+  display:flex;align-items:center;justify-content:center;
+}
+.shape-1{
+  position:absolute;width:180px;height:240px;
+  border:1px solid var(--accent);
+  border-radius:120px 120px 0 0;
+  transform:rotate(-4deg);
+  animation:floatSoft 8s ease-in-out infinite alternate;
+}
+.shape-2{
+  position:absolute;width:150px;height:210px;
+  background:var(--surface);
+  box-shadow:0 12px 40px rgba(0,0,0,0.04);
+  border-radius:100px 100px 0 0;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--serif);font-size:48px;font-style:italic;color:var(--text);
+  animation:floatSoft 10s ease-in-out infinite alternate-reverse;
+}
+@keyframes floatSoft{
+  0%{transform:translateY(0) rotate(0deg);}
+  100%{transform:translateY(-6px) rotate(2deg);}
+}
+.fine-line{width:1px;height:40px;background:var(--accent);margin:0 auto;}
+
+/* ── TOGGLE ── */
+.toggle-row{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  padding:20px 0;border-bottom:1px solid var(--border);
+  cursor:pointer;
+}
+.toggle-track{
+  width:44px;height:24px;border-radius:100px;
+  background:var(--border);position:relative;transition:all 0.3s;
+  flex-shrink:0;margin-top:2px;
+}
+.toggle-track.on{background:var(--text);}
+.toggle-thumb{
+  position:absolute;top:3px;left:3px;
+  width:18px;height:18px;border-radius:50%;background:var(--surface);
+  transition:transform 0.4s cubic-bezier(0.2,0.8,0.2,1);
+  box-shadow:0 1px 3px rgba(0,0,0,0.1);
+}
+.toggle-track.on .toggle-thumb{transform:translateX(20px);}
+
+/* ── SCROLL ── */
+.scroll-y{overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.scroll-y::-webkit-scrollbar{display:none;}
+
+/* ── CHAR COUNTER ── */
+.char-hint{font-size:11px;font-family:var(--sans);letter-spacing:0.05em;color:var(--dim);transition:color 0.2s;text-transform:uppercase;}
+.char-hint.ok{color:var(--text);}
+\`;
+
+/* ── DATA ── */
+const TOTAL_SCREENS = 7;
+
+/* ════════════════════════════════════════════
+   SCREENS
+════════════════════════════════════════════ */
+
+/* 0 — SPLASH */
+const S0_Splash = ({onNext}) => (
+  <div className="ob-screen" style={{justifyContent:"space-between",padding:"60px 0 52px"}}>
+    {/* Logo */}
+    <div className="s0" style={{textAlign:"center",padding:"0 32px"}}>
+      <div className="eye">Mentally Prepare</div>
+    </div>
+
+    {/* Art */}
+    <div className="s1" style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div className="art-box">
+        <div className="shape-1"/>
+        <div className="shape-2">I</div>
+      </div>
+    </div>
+
+    {/* Text + CTA */}
+    <div style={{display:"flex",flexDirection:"column",gap:24}}>
+      <div className="s2" style={{textAlign:"center",padding:"0 32px"}}>
+        <h1 className="h1" style={{marginBottom:16}}>Know yourself.<br/><em style={{color:"var(--muted)"}}>Finally.</em></h1>
+        <p className="body s3" style={{maxWidth:280,margin:"0 auto"}}>
+          A psychological operating system for social confidence and emotional resilience.
+        </p>
+      </div>
+      <div className="s4 btn-wrap">
+        <button className="btn btn-p" onClick={onNext}>
+          Begin the mirror scan <span className="arrow-r">→</span>
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+/* 1 — THE PROMISE (what it's NOT) */
+const S1_Promise = ({onNext,onBack}) => (
+  <div className="ob-screen" style={{padding:"0 0 48px",justifyContent:"space-between"}}>
+    <div className="scroll-y" style={{padding:"52px 32px 32px"}}>
+      <div className="fine-line s0" style={{marginBottom:32,marginLeft:0}}/>
+      <div className="eye s1" style={{marginBottom:16}}>Before we begin</div>
+      <h2 className="h2 s2" style={{marginBottom:24}}>This is not a<br/><em style={{color:"var(--muted)"}}>wellness app.</em></h2>
+      <p className="body s3" style={{marginBottom:40,fontSize:16}}>
+        No toxic positivity. No mood trackers. No journaling prompts with illustrated sunflowers.
+      </p>
+
+      <div style={{display:"flex",flexDirection:"column",borderTop:"1px solid var(--border)"}}>
+        {[
+          {no:"01", title:"A mirror, not a cheerleader", body:"It shows you who you actually are — not who you want to be told you are."},
+          {no:"02", title:"Psychological depth", body:"Emotionally precise. Uncomfortably accurate. Designed for people who can handle truth."},
+          {no:"03", title:"For the real world", body:"Social situations. Identity shifts. Emotional spirals. This is for right now."},
+        ].map((f,i)=>(
+          <div key={i} className={\`feat-row s\${i+3}\`}>
+            <div className="feat-no">{f.no}</div>
+            <div>
+              <div style={{fontFamily:"var(--serif)",fontSize:20,marginBottom:6,color:"var(--text)"}}>{f.title}</div>
+              <div style={{fontFamily:"var(--sans)",fontSize:14,color:"var(--muted)",lineHeight:1.6}}>{f.body}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div className="btn-wrap" style={{display:"flex",flexDirection:"column",gap:16,marginTop:16}}>
+      <button className="btn btn-p s5" onClick={onNext}>I understand <span className="arrow-r">→</span></button>
+      <button className="btn-sm s5" style={{alignSelf:"center"}} onClick={onBack}>Cancel</button>
+    </div>
+  </div>
+);
+
+/* 2 — NAME */
+const S2_Name = ({onNext,onBack,name,setName}) => {
+  const inputRef = useRef(null);
+  useEffect(()=>{ setTimeout(()=>inputRef.current?.focus(),400); },[]);
+  const ok = name.trim().length >= 2;
+
+  return(
+    <div className="ob-screen" style={{padding:"0 0 48px",justifyContent:"space-between"}}>
+      <div className="scroll-y" style={{padding:"52px 32px 32px",flex:1}}>
+        <div className="fine-line s0" style={{marginBottom:32,marginLeft:0}}/>
+        <div className="eye s1" style={{marginBottom:16}}>Identity</div>
+        <h2 className="h2 s2" style={{marginBottom:16}}>What do<br/><em>people call you?</em></h2>
+        <p className="body s3" style={{marginBottom:48,maxWidth:280}}>Not your full name. Just what the people who know you call you.</p>
+
+        <div className="s4">
+          <input
+            ref={inputRef}
+            className="name-input"
+            placeholder="Your name"
+            value={name}
+            onChange={e=>setName(e.target.value)}
+            onKeyDown={e=>e.key==="Enter"&&ok&&onNext()}
+            maxLength={24}
+            autoComplete="off"
+            autoCapitalize="words"
+          />
+          <div style={{display:"flex",justifyContent:"space-between",marginTop:12}}>
+            <div style={{fontSize:13,color:"var(--muted)",fontFamily:"var(--serif)",fontStyle:"italic"}}>
+              {name.trim().length > 0 ? \`Nice to meet you, \${name.trim()}.\` : ""}
+            </div>
+            <div className={\`char-hint\${ok?" ok":""}\`}>{name.length}/24</div>
+          </div>
+        </div>
+
+        {/* Quote preview */}
+        {name.trim().length > 0 && (
+          <div className="s5" style={{marginTop:48,borderLeft:"1px solid var(--accent)",paddingLeft:20}}>
+            <p className="serif" style={{fontSize:18,fontStyle:"italic",color:"var(--text)",lineHeight:1.6}}>
+              "\${name.trim()}, your scan is about to begin. Answer honestly — this only works if you do."
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="btn-wrap" style={{display:"flex",flexDirection:"column",gap:16}}>
+        <button className="btn btn-p" disabled={!ok} onClick={onNext} style={{opacity:ok?1:0.32}}>
+          {ok ? \`That's me\` : "Enter a name"} {ok && <span className="arrow-r">→</span>}
+        </button>
+        <button className="btn-sm" style={{alignSelf:"center"}} onClick={onBack}>Go back</button>
+      </div>
+    </div>
+  );
+};
+
+/* 3 — INTENTION */
+const S3_Intention = ({onNext,onBack,name,pick,setPick}) => {
+  const opts=[
+    {label:"Social confidence",body:"Navigating rooms, relationships, and rejection."},
+    {label:"Identity clarity",body:"Understanding who I actually am right now."},
+    {label:"Emotional resilience",body:"Bouncing back faster, feeling less broken."},
+    {label:"Total reset",body:"I need a full psychological overhaul."},
+  ];
+  return(
+    <div className="ob-screen" style={{padding:"0 0 48px",justifyContent:"space-between"}}>
+      <div className="scroll-y" style={{padding:"52px 32px 32px",flex:1}}>
+        <div className="fine-line s0" style={{marginBottom:32,marginLeft:0}}/>
+        <div className="eye s1" style={{marginBottom:16}}>Focus area</div>
+        <h2 className="h2 s2" style={{marginBottom:16}}>
+          {name ? \`\${name}, what\` : "What"} brings<br/><em>you here?</em>
+        </h2>
+        <p className="body s3" style={{marginBottom:40}}>This shapes your daily practice and archetype framing.</p>
+
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          {opts.map((o,i)=>(
+            <button key={i} className={\`choice s\${i+3}\${pick===i?" picked":""}\`} onClick={()=>setPick(i)}>
+              <div style={{flex:1}}>
+                <div style={{fontFamily:"var(--serif)",fontSize:20,marginBottom:4}}>{o.label}</div>
+                <div className="ch-sub" style={{fontFamily:"var(--sans)",fontSize:13,color:"var(--muted)",lineHeight:1.5}}>{o.body}</div>
+              </div>
+              <div className="choice-dot"/>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="btn-wrap" style={{display:"flex",flexDirection:"column",gap:16,marginTop:16}}>
+        <button className="btn btn-p" disabled={pick===null} onClick={onNext} style={{opacity:pick!==null?1:0.3}}>
+          Set intention <span className="arrow-r">→</span>
+        </button>
+        <button className="btn-sm" style={{alignSelf:"center"}} onClick={onBack}>Go back</button>
+      </div>
+    </div>
+  );
+};
+
+/* 4 — ARCHETYPE TEASE */
+const S4_ArchetypeTease = ({onNext,onBack}) => {
+  return(
+    <div className="ob-screen" style={{padding:"0 0 48px",justifyContent:"space-between"}}>
+      <div className="scroll-y" style={{padding:"52px 32px 32px",flex:1}}>
+        <div className="fine-line s0" style={{marginBottom:32,marginLeft:0}}/>
+        <div className="eye s1" style={{marginBottom:16}}>The Framework</div>
+        <h2 className="h2 s2" style={{marginBottom:16}}>Your archetype<br/><em>awaits.</em></h2>
+        <p className="body s3" style={{marginBottom:40}}>
+          Seven questions. Deep psychological framing. One precise mirror reflecting your core.
+        </p>
+
+        <div className="s4" style={{borderLeft:"1px solid var(--accent)",paddingLeft:24,marginBottom:40}}>
+          <h3 className="h3" style={{marginBottom:16}}>The Archetypes</h3>
+          <ul style={{listStyle:"none",display:"flex",flexDirection:"column",gap:16}}>
+            {[
+              "The Quiet Storm",
+              "The Mirror Breaker",
+              "The Night Architect",
+              "The Depth Keeper",
+            ].map((name,i)=>(
+              <li key={i} style={{fontFamily:"var(--sans)",fontSize:15,color:"var(--text)",display:"flex",alignItems:"center",gap:16}}>
+                <span style={{color:"var(--dim)",fontFamily:"var(--serif)",fontStyle:"italic"}}>0{i+1}</span>
+                {name}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      <div className="btn-wrap" style={{display:"flex",flexDirection:"column",gap:16}}>
+        <button className="btn btn-p s5" onClick={onNext}>Continue <span className="arrow-r">→</span></button>
+        <button className="btn-sm" style={{alignSelf:"center"}} onClick={onBack}>Go back</button>
+      </div>
+    </div>
+  );
+};
+
+/* 5 — PERMISSIONS */
+const S5_Permissions = ({onNext,onBack}) => {
+  const [notifs,setNotifs]=useState(true);
+  const [missions,setMissions]=useState(true);
+
+  return(
+    <div className="ob-screen" style={{padding:"0 0 48px",justifyContent:"space-between"}}>
+      <div className="scroll-y" style={{padding:"52px 32px 32px",flex:1}}>
+        <div className="fine-line s0" style={{marginBottom:32,marginLeft:0}}/>
+        <div className="eye s1" style={{marginBottom:16}}>Environment</div>
+        <h2 className="h2 s2" style={{marginBottom:16}}>Set your<br/><em>boundaries.</em></h2>
+        <p className="body s3" style={{marginBottom:40}}>You control the volume. No unnecessary noise, just pure signal.</p>
+
+        <div className="s4" style={{borderTop:"1px solid var(--border)"}}>
+          <div className="toggle-row" onClick={()=>setNotifs(v=>!v)}>
+            <div>
+              <div style={{fontFamily:"var(--serif)",fontSize:20,color:"var(--text)",marginBottom:4}}>Daily practice nudge</div>
+              <div style={{fontFamily:"var(--sans)",fontSize:13,color:"var(--muted)"}}>One gentle prompt, once per day.</div>
+            </div>
+            <div className={\`toggle-track\${notifs?" on":""}\`}><div className="toggle-thumb"/></div>
+          </div>
+          <div className="toggle-row" onClick={()=>setMissions(v=>!v)}>
+            <div>
+              <div style={{fontFamily:"var(--serif)",fontSize:20,color:"var(--text)",marginBottom:4}}>Situation alerts</div>
+              <div style={{fontFamily:"var(--sans)",fontSize:13,color:"var(--muted)"}}>Reminders before logged social events.</div>
+            </div>
+            <div className={\`toggle-track\${missions?" on":""}\`}><div className="toggle-thumb"/></div>
+          </div>
+        </div>
+
+        <p className="s5" style={{fontFamily:"var(--sans)",fontSize:12,color:"var(--dim)",marginTop:32,lineHeight:1.6}}>
+          You can adjust these boundaries at any time. We strictly protect your psychological data.
+        </p>
+      </div>
+
+      <div className="btn-wrap" style={{display:"flex",flexDirection:"column",gap:16}}>
+        <button className="btn btn-p s5" onClick={onNext}>Confirm boundaries <span className="arrow-r">→</span></button>
+        <button className="btn-sm" style={{alignSelf:"center"}} onClick={onBack}>Skip for now</button>
+      </div>
+    </div>
+  );
+};
+
+/* 6 — READY */
+const S6_Ready = ({onFinish,name,intention}) => {
+  const intentMap = ["social confidence","identity clarity","emotional resilience","a total reset"];
+  
+  return(
+    <div className="ob-screen" style={{padding:"0 0 48px",justifyContent:"space-between",alignItems:"center",textAlign:"center"}}>
+      <div className="scroll-y" style={{padding:"80px 32px 32px",flex:1,width:"100%"}}>
+        
+        <div className="s0" style={{marginBottom:40}}>
+          <div className="fine-line" style={{height:60}}/>
+        </div>
+
+        <div className="eye s1" style={{marginBottom:16}}>Preparation complete</div>
+        <h2 className="h2 s2" style={{marginBottom:24}}>
+          {name ? \`\${name}, let's\` : "Let's"} go<br/><em>deeper.</em>
+        </h2>
+        <p className="body s3" style={{maxWidth:280,margin:"0 auto 48px"}}>
+          The mirror is ready. We will build towards {intentMap[intention??3]} together.
+        </p>
+
+        {/* Minimal Summary Box */}
+        <div className="s4" style={{background:"var(--surface)",border:"1px solid var(--border)",padding:"32px 24px",textAlign:"left"}}>
+          <div style={{fontFamily:"var(--serif)",fontSize:14,fontStyle:"italic",color:"var(--muted)",marginBottom:16}}>Manifest</div>
+          <div style={{display:"flex",justifyContent:"space-between",paddingBottom:12,borderBottom:"1px dotted var(--border)",marginBottom:12}}>
+            <span style={{fontFamily:"var(--sans)",fontSize:13,color:"var(--muted)"}}>Subject</span>
+            <span style={{fontFamily:"var(--serif)",fontSize:18,color:"var(--text)"}}>{name||"Anonymous"}</span>
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between",paddingBottom:12}}>
+            <span style={{fontFamily:"var(--sans)",fontSize:13,color:"var(--muted)"}}>Objective</span>
+            <span style={{fontFamily:"var(--serif)",fontSize:18,color:"var(--text)"}}>
+              {["Confidence","Clarity","Resilience","Reset"][intention??3]}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="btn-wrap" style={{width:"100%",display:"flex",flexDirection:"column",gap:16}}>
+        <button className="btn btn-p s5" onClick={onFinish}>Start the scan <span className="arrow-r">→</span></button>
+        <div className="s5" style={{fontFamily:"var(--sans)",fontSize:11,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.05em"}}>7 questions · Deep analysis</div>
+      </div>
+    </div>
+  );
+};
+
+/* ════════════════════════════════════════════
+   MAIN
+════════════════════════════════════════════ */
+function Onboarding(){
+  const [screen,setScreen]=useState(0);
+  const [dir,setDir]=useState("fwd");
+  const [anim,setAnim]=useState("enter");
+  const [transitioning,setTransitioning]=useState(false);
+
+  // User state
+  const [name,setName]=useState("");
+  const [intention,setIntention]=useState(null);
+
+  const go = useCallback((to)=>{
+    if(transitioning) return;
+    const forward = to > screen;
+    setTransitioning(true);
+    setDir(forward?"fwd":"back");
+    setAnim(forward?"exit":"exit-back");
+    setTimeout(()=>{
+      setScreen(to);
+      setAnim(forward?"enter":"enter-back");
+      setTransitioning(false);
+    },480); // match exit css timing
+  },[screen,transitioning]);
+
+  const next = ()=>go(screen+1);
+  const back = ()=>go(screen-1);
+
+  const screenProps = {onNext:next,onBack:back,name,setName,intention,setIntention,pick:intention,setPick:setIntention};
+
+  const screens = [
+    <S0_Splash {...screenProps}/>,
+    <S1_Promise {...screenProps}/>,
+    <S2_Name {...screenProps}/>,
+    <S3_Intention {...screenProps}/>,
+    <S4_ArchetypeTease {...screenProps}/>,
+    <S5_Permissions {...screenProps}/>,
+    <S6_Ready {...screenProps} onFinish={()=>alert(\`Welcome, \${name||"friend"}! Mirror Scan launching…\`)}/>,
+  ];
+
+  return(
+    <React.Fragment>
+      <style>{CSS}</style>
+      <div className="ob-wrap">
+        {/* Progress */ }
+        {screen>0 && screen<TOTAL_SCREENS && (
+          <div className="progress-wrap" style={{position:"absolute",top:0,left:0,right:0,zIndex:10}}>
+            <div className="worm-track">
+              <div className="worm-fill" style={{width:\`\${(screen/( TOTAL_SCREENS-1))*100}%\`}}/>
+            </div>
+          </div>
+        )}
+
+        {/* Screen */}
+        <div key={screen} className={\`ob-screen \${anim}\`}>
+          {screens[screen]}
+        </div>
+      </div>
+    </React.Fragment>
+  );
+}
+
+// Render
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<Onboarding />);
+  </script>
+</body>
+</html>

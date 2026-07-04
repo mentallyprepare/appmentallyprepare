@@ -1,0 +1,26 @@
+{
+  "name": "mentally-prepare",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "mocha \"test/**/*.test.js\""
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^12.6.2",
+    "express": "^4.21.0",
+    "express-rate-limit": "^7.5.0",
+    "express-session": "^1.18.1",
+    "helmet": "^8.1.0",
+    "razorpay": "^2.9.6",
+    "stripe": "^20.4.1",
+    "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "chai": "^6.2.2",
+    "mocha": "^11.7.6",
+    "supertest": "^7.2.2"
+  }
+}
