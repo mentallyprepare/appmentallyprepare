@@ -4,10 +4,11 @@ const stmts = require('../../db');
 const { scanForSafety } = require('../utils/safety');
 const { HELPLINES, prompts } = require('../config/constants');
 const { getMatchDay } = require('../utils/matching');
+const { analyzeJournal, getProvider } = require('../services/llm');
 
 const router = express.Router();
 
-router.post('/entry', (req, res) => {
+router.post('/entry', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Unauthorized' });
   try {
     const userId = req.session.userId;
@@ -21,7 +22,15 @@ router.post('/entry', (req, res) => {
     if (day > 21) return res.status(400).json({ error: 'Journey complete' });
     const prompt = prompts[(day - 1) % prompts.length];
     stmts.upsertEntry.run(userId, match.id, day, prompt, text.trim(), mood || '🌓', safety.crisis ? 1 : 0, safety.pii ? 1 : 0, new Date().toISOString());
-    res.json({ ok: true, day, safety: { crisis: safety.crisis, pii: safety.pii, helplines: safety.crisis ? HELPLINES : null } });
+
+    let aiAnalysis = null;
+    if (getProvider()) {
+      try {
+        aiAnalysis = await analyzeJournal(text);
+      } catch { }
+    }
+
+    res.json({ ok: true, day, safety: { crisis: safety.crisis, pii: safety.pii, helplines: safety.crisis ? HELPLINES : null }, aiAnalysis });
   } catch (e) {
     console.error('Entry error:', e);
     res.status(500).json({ error: 'Failed to save entry' });

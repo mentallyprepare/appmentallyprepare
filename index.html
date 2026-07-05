@@ -345,9 +345,146 @@ const SCAN_PHRASES = [
 ];
 
 /* =========================================================================
-   AI SIMULATION
+   AI ANALYSIS — calls the real backend API
 ========================================================================= */
-async function callClaude(systemPrompt, userMessage, onChunk) {
+async function callClaude(systemPrompt, userMessage, onChunk, answers) {
+  try {
+    const res = await fetch('/api/analyze/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answers: answers || [] })
+    });
+    if (!res.ok) throw new Error('Analysis failed');
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let fullText = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith('data: ')) continue;
+        const data = trimmed.slice(6);
+        if (data === '[DONE]') return fullText;
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.text) {
+            fullText += parsed.text;
+            onChunk(fullText);
+          }
+        } catch { }
+      }
+    }
+    return fullText;
+  } catch (err) {
+    // Fallback to offline analysis if API unavailable
+    return fallbackAnalysis(answers || []);
+  }
+}
+
+function fallbackAnalysis(answers) {
+  // Simple offline analysis based on answers
+  const choiceCounts = {};
+  const archetypeScores = { protector: 0, connector: 0, performer: 0, disconnector: 0 };
+  const allChoices = answers.filter(a => typeof a === 'string');
+  
+  // Rough heuristic mapping
+  const answerMap = {
+    "Replay the last conversation looking for my mistake": { protector: 2, performer: 1 },
+    "Assume they're dealing with something and step back": { connector: 2, disconnector: 1 },
+    "Pull back too - match their energy so I don't seem desperate": { protector: 1, performer: 2 },
+    "Spiral quietly but pretend everything's fine on the outside": { disconnector: 2, protector: 1 },
+    "Like I'm being evaluated before I've said a word": { protector: 2, performer: 1 },
+    "Curious. I'm here to observe first": { connector: 2, disconnector: 1 },
+    "Like I need to find my person quickly or I'll spiral": { connector: 2, protector: 1 },
+    "Oddly okay - I move through invisibility comfortably": { disconnector: 2, performer: 1 },
+    "Go quiet and process it alone for days": { disconnector: 2, protector: 1 },
+    "Push back calmly - I know who I am": { performer: 2, connector: 1 },
+    "Wonder if they're right, even when I know they're not": { protector: 2, performer: 1 },
+    "Feel a flash of anger, then fold it neatly away": { disconnector: 2, performer: 1 },
+    "The one who stops caring what happens to them": { disconnector: 2, performer: 1 },
+    "The one who keeps shrinking to keep the peace": { protector: 2, connector: 1 },
+    "The one who finally says everything they've been holding": { connector: 2, performer: 1 },
+    "The one who realizes they've been performing all along": { performer: 2, disconnector: 1 },
+    "Seeing people clearly before they've shown me who they are": { connector: 2, disconnector: 1 },
+    "Absorbing everything and needing nothing (on the outside)": { protector: 2, performer: 1 },
+    "Making others feel safe enough to be real": { connector: 2, protector: 1 },
+    "Turning pain into something precise and useful": { performer: 2, disconnector: 1 }
+  };
+  
+  for (const a of allChoices) {
+    const map = answerMap[a];
+    if (map) {
+      for (const [k, v] of Object.entries(map)) archetypeScores[k] += v;
+    }
+  }
+  
+  const top = Object.entries(archetypeScores).sort((a, b) => b[1] - a[1])[0];
+  const archetype = top ? top[0] : 'connector';
+  
+  const profileNames = {
+    protector: "The Quiet Guardian",
+    connector: "The Depth Seeker",
+    performer: "The Shaped Edge",
+    disconnector: "The Unseen Architect"
+  };
+  
+  const profiles = {
+    protector: {
+      archetype_name: profileNames[archetype],
+      archetype_rarity: "Common Profile",
+      core_truth: "You protect others from your depth because you've never been shown that it's safe to share it.",
+      the_wound: "You learned early that emotional honesty was unsafe.",
+      the_gift: "You have an extraordinary capacity for loyalty and quiet strength.",
+      shadow: "Your protection becomes isolation. The walls you built for safety keep out the very people who might understand.",
+      next_unlock: "Let one person see the version of you you've been hiding.",
+      traits: { "Emotional Depth": 75, "Social Presence": 40, "Resilience": 82, "Self-Expression": 35 },
+      one_line: "Protecting others from yourself while longing to be known."
+    },
+    connector: {
+      archetype_name: profileNames[archetype],
+      archetype_rarity: "Common Profile",
+      core_truth: "You seek depth because shallow waters have never felt safe enough to rest in.",
+      the_wound: "You have given more than you've received, more times than you'd admit.",
+      the_gift: "You create spaces where others feel permission to be real.",
+      shadow: "Your hunger for connection sometimes bypasses your own boundaries. Not everyone deserves your depths.",
+      next_unlock: "Learn to discriminate: give depth to those who have earned it.",
+      traits: { "Emotional Depth": 88, "Social Presence": 72, "Resilience": 55, "Self-Expression": 78 },
+      one_line: "Searching for someone who can hold what you carry."
+    },
+    performer: {
+      archetype_name: profileNames[archetype],
+      archetype_rarity: "Rare Profile",
+      core_truth: "You learned to perform before you learned to feel, and now you're tired of the distance.",
+      the_wound: "You were valued for what you produced, not who you were.",
+      the_gift: "You can navigate any social terrain. Your adaptability is a superpower.",
+      shadow: "The mask has become so comfortable that even you forget it's there. The exhaustion is real.",
+      next_unlock: "Give yourself permission to not be impressive for one day.",
+      traits: { "Emotional Depth": 60, "Social Presence": 90, "Resilience": 70, "Self-Expression": 45 },
+      one_line: "Mastering the stage while wondering who you are in the dark."
+    },
+    disconnector: {
+      archetype_name: profileNames[archetype],
+      archetype_rarity: "Rare Profile",
+      core_truth: "You see what others miss because you've spent more time in the quiet than in the noise.",
+      the_wound: "You've felt invisible so often that you learned to weaponize it as peace.",
+      the_gift: "You move through chaos without being consumed by it. Your detachment is a lens.",
+      shadow: "The same detachment that protects you also keeps you from receiving care.",
+      next_unlock: "Try staying in the room even when it's uncomfortable.",
+      traits: { "Emotional Depth": 85, "Social Presence": 25, "Resilience": 78, "Self-Expression": 50 },
+      one_line: "Watching from the edge, ready to disappear at any moment."
+    }
+  };
+  
+  const profile = profiles[archetype];
+  return JSON.stringify(profile);
+}
+
+async function callClaudeOld(systemPrompt, userMessage, onChunk) {
   const dummyResponse = {
     archetype_name: "The Quiet Storm",
     archetype_rarity: "Rare Profile",
@@ -840,7 +977,7 @@ function App() {
       setPhase("processing");
       try {
         let finalText = "";
-        await callClaude("", "process", (partial) => { finalText = partial; });
+        await callClaude("", "process", (partial) => { finalText = partial; }, answers);
         const clean = finalText.replace(/```json|```/gi, "").trim();
         const parsed = JSON.parse(clean);
         setResult(parsed);
