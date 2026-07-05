@@ -29,26 +29,33 @@ import ResultScreen from './src/screens/quiz/ResultScreen';
 // Main tabs
 import JournalScreen from './src/screens/main/JournalScreen';
 import PartnerScreen from './src/screens/main/PartnerScreen';
-import AboutScreen from './src/screens/main/AboutScreen';
 import ProfileScreen from './src/screens/main/ProfileScreen';
 import SettingsScreen from './src/screens/main/SettingsScreen';
 import RevealScreen from './src/screens/main/RevealScreen';
+import NotificationsScreen from './src/screens/main/NotificationsScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-function TabIcon({ label, focused }) {
+function TabIcon({ label, focused, unread }) {
   const icons = {
     Journal: '📝',
     Partner: '🌙',
-    About: '🪞',
+    Notifications: '🔔',
     Profile: '👤',
     Settings: '⚙️',
     Reveal: '🔓',
   };
   return (
     <View style={{ alignItems: 'center', gap: 2 }}>
-      <Text style={{ fontSize: 18, opacity: focused ? 1 : 0.4 }}>{icons[label] || '○'}</Text>
+      <View>
+        <Text style={{ fontSize: 18, opacity: focused ? 1 : 0.4 }}>{icons[label] || '○'}</Text>
+        {label === 'Notifications' && unread > 0 && (
+          <View style={{ position: 'absolute', top: -4, right: -8, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: '#9B4F66', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 }}>
+            <Text style={{ fontSize: 8, fontWeight: '600', color: '#F8F2FF' }}>{unread > 9 ? '9+' : unread}</Text>
+          </View>
+        )}
+      </View>
       <Text style={{ fontSize: 8, color: focused ? theme.roseL : theme.inkS, letterSpacing: 1, textTransform: 'uppercase' }}>
         {label}
       </Text>
@@ -57,10 +64,24 @@ function TabIcon({ label, focused }) {
 }
 
 function MainTabs() {
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const data = await api.me();
+        setUnreadCount(data.unread || 0);
+      } catch { }
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused }) => <TabIcon label={route.name} focused={focused} />,
+        tabBarIcon: ({ focused }) => <TabIcon label={route.name} focused={focused} unread={unreadCount} />,
         tabBarShowLabel: false,
         headerShown: false,
         tabBarStyle: {
@@ -75,8 +96,8 @@ function MainTabs() {
     >
       <Tab.Screen name="Journal" component={JournalScreen} />
       <Tab.Screen name="Partner" component={PartnerScreen} />
+      <Tab.Screen name="Notifications" component={NotificationsScreen} />
       <Tab.Screen name="Reveal" component={RevealScreen} />
-      <Tab.Screen name="About" component={AboutScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
       <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>

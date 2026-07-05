@@ -31,4 +31,9 @@ export const api = {
   myData: () => request('/api/my-data'),
   deleteAccount: (password) => request('/api/account', { method: 'DELETE', body: { password } }),
   payHistory: () => request('/api/pay/history'),
+  notifications: () => request('/api/notifications'),
+  markNotifRead: (id) => request(`/api/notifications/read/${id}`, { method: 'POST' }),
+  markAllNotifRead: () => request('/api/notifications/read-all', { method: 'POST' }),
+  notifPreferences: () => request('/api/notifications/preferences'),
+  updateNotifPreferences: (prefs) => request('/api/notifications/preferences', { method: 'POST', body: { preferences: prefs } }),
 };
