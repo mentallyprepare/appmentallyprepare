@@ -5,6 +5,7 @@ const { scanForSafety } = require('../utils/safety');
 const { HELPLINES, prompts } = require('../config/constants');
 const { getMatchDay } = require('../utils/matching');
 const { analyzeJournal, getProvider } = require('../services/llm');
+const { notifyPartnerEntry, notifyPartnerComment } = require('../services/notifications');
 
 const router = express.Router();
 
@@ -22,6 +23,10 @@ router.post('/entry', async (req, res) => {
     if (day > 21) return res.status(400).json({ error: 'Journey complete' });
     const prompt = prompts[(day - 1) % prompts.length];
     stmts.upsertEntry.run(userId, match.id, day, prompt, text.trim(), mood || '🌓', safety.crisis ? 1 : 0, safety.pii ? 1 : 0, new Date().toISOString());
+
+    const partnerId = require('../utils/matching').getPartnerId(match, userId);
+    const entryResult = stmts.getEntry.get(userId, match.id, day);
+    notifyPartnerEntry(partnerId, day, entryResult?.id);
 
     let aiAnalysis = null;
     if (getProvider()) {
@@ -53,6 +58,7 @@ router.post('/comment', (req, res) => {
     const partnerEntry = stmts.getEntry.get(partnerId, match.id, day);
     if (!partnerEntry) return res.status(400).json({ error: 'No partner entry to comment on' });
     stmts.insertComment.run(crypto.randomUUID(), partnerEntry.id, userId, text.trim(), new Date().toISOString());
+    notifyPartnerComment(partnerId, day, text.trim());
     res.json({ ok: true });
   } catch (e) {
     console.error('Comment error:', e);

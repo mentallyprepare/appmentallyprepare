@@ -4,6 +4,7 @@ const { attemptMatch, getMatchDay, getPartnerId } = require('../utils/matching')
 const { getAdaptivePrompt } = require('../utils/themes');
 const { getMoodInsights } = require('../utils/mood');
 const { prompts, EMOTIONAL_THEMES } = require('../config/constants');
+const { notifyMatchFound } = require('../services/notifications');
 
 const router = express.Router();
 
@@ -20,6 +21,15 @@ router.post('/scan', (req, res) => {
     const user = stmts.getUserById.get(userId);
     stmts.updateUser.run(user.name, user.email, user.college, user.year, user.gender, user.match_pref_gender, user.match_pref_year, user.consent_given, archetype, userId);
     const matched = attemptMatch(userId);
+    if (matched) {
+      const match = stmts.getMatch.get(userId, userId);
+      if (match) {
+        const partnerId = getPartnerId(match, userId);
+        const partner = stmts.getUserById.get(partnerId);
+        notifyMatchFound(userId, partner?.name);
+        notifyMatchFound(partnerId, user?.name);
+      }
+    }
     res.json({ ok: true, matched: !!matched });
   } catch (e) {
     console.error('Scan error:', e);
@@ -55,6 +65,16 @@ router.post('/switch-partner', (req, res) => {
     if (!match) return res.status(400).json({ error: 'No current match to switch from' });
     stmts.deleteMatch.run(match.id);
     const newMatch = attemptMatch(userId);
+    if (newMatch) {
+      const newMatchRec = stmts.getMatch.get(userId, userId);
+      if (newMatchRec) {
+        const partnerId = getPartnerId(newMatchRec, userId);
+        const partner = stmts.getUserById.get(partnerId);
+        const user = stmts.getUserById.get(userId);
+        notifyMatchFound(userId, partner?.name);
+        notifyMatchFound(partnerId, user?.name);
+      }
+    }
     res.json({ ok: true, matched: !!newMatch, switchesRemaining: 1 });
   } catch (e) {
     console.error('Switch error:', e);

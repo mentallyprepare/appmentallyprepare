@@ -26,6 +26,7 @@ const initDB = () => {
       ecp_scores TEXT,
       consent_given INTEGER NOT NULL DEFAULT 1,
       push_subscription TEXT,
+      notif_prefs TEXT DEFAULT '{"partner_entry":true,"partner_comment":true,"match_found":true,"reveal":true,"daily_prompt":true,"system":true}',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -72,6 +73,18 @@ const initDB = () => {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       PRIMARY KEY (match_id, user_id),
       FOREIGN KEY(match_id) REFERENCES matches(id),
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      body TEXT NOT NULL,
+      data TEXT,
+      read INTEGER NOT NULL DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(user_id) REFERENCES users(id)
     );
 
@@ -172,6 +185,17 @@ const preparedStatements = {
 
   // Deletion Log
   insertDeletionLog: db.prepare('INSERT INTO deletion_log (hashed_identifier, reason, deleted_at) VALUES (?, ?, ?)'),
+
+  // Notifications
+  insertNotification: db.prepare('INSERT INTO notifications (user_id, type, title, body, data, read, created_at) VALUES (?, ?, ?, ?, ?, 0, ?)'),
+  getUserNotifications: db.prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50'),
+  getUnreadCount: db.prepare('SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND read = 0'),
+  markNotifRead: db.prepare('UPDATE notifications SET read = 1 WHERE id = ? AND user_id = ?'),
+  markAllNotifRead: db.prepare('UPDATE notifications SET read = 1 WHERE user_id = ?'),
+  deleteNotif: db.prepare('DELETE FROM notifications WHERE id = ? AND user_id = ?'),
+  getUserNotifPrefs: db.prepare('SELECT notif_prefs FROM users WHERE id = ?'),
+  updateNotifPrefs: db.prepare('UPDATE users SET notif_prefs = ? WHERE id = ?'),
+  deleteUserNotifications: db.prepare('DELETE FROM notifications WHERE user_id = ?'),
 
   // Waitlist
   insertWaitlist: db.prepare('INSERT INTO waitlist (email, created_at) VALUES (?, ?)'),

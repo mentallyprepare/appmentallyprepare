@@ -14,6 +14,7 @@ const matchingRoutes = require('./routes/matching');
 const paymentsRoutes = require('./routes/payments');
 const pushRoutes = require('./routes/push');
 const analyzeRoutes = require('./routes/analyze');
+const notificationRoutes = require('./routes/notifications');
 
 const app = express();
 
@@ -83,6 +84,7 @@ app.use('/api', matchingRoutes);
 app.use('/api/pay', paymentsRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api', analyzeRoutes);
+app.use('/api', notificationRoutes);
 
 // ─── Frontend Routes ────────────────────
 const indexHtml = path.join(__dirname, '..', 'public', 'index.html');

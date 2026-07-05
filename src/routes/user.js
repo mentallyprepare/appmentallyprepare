@@ -75,7 +75,8 @@ router.get('/me', (req, res) => {
       adaptivePrompt = getAdaptivePrompt(entriesData, day);
     }
     const insights = entriesData.length >= 3 ? getMoodInsights(entriesData) : null;
-    res.json({ status: 'ok', user: safeUser, match: matchData, entries: entriesData, partnerEntries, streak, reveal: revealData, comments, adaptivePrompt, insights });
+    const unread = stmts.getUnreadCount ? stmts.getUnreadCount.get(userId).count : 0;
+    res.json({ status: 'ok', user: safeUser, match: matchData, entries: entriesData, partnerEntries, streak, reveal: revealData, comments, adaptivePrompt, insights, unread });
   } catch (err) {
     console.error('Error in /api/me:', err);
     res.status(500).json({ error: 'Server error' });
@@ -165,6 +166,7 @@ router.delete('/account', async (req, res) => {
       if (stmts.deleteUserReveals) stmts.deleteUserReveals.run(userId);
       if (stmts.deleteUserComments) stmts.deleteUserComments.run(userId);
       if (stmts.deleteUserReports) stmts.deleteUserReports.run(userId);
+      if (stmts.deleteUserNotifications) stmts.deleteUserNotifications.run(userId);
       if (stmts.deleteUserMatches) stmts.deleteUserMatches.run(userId, userId);
       stmts.deleteUser.run(userId);
     });
