@@ -53,6 +53,8 @@ app.use(helmet({
       frameSrc: ["'self'", 'https://checkout.razorpay.com', 'https://js.stripe.com'],
     },
   } : false,
+  // Allow embedding in iframes (needed for Replit preview)
+  frameguard: false,
 }));
 
 // Tiered rate limiting
