@@ -162,15 +162,16 @@ app.use('/api', healthRoutes);
 app.use('/api/admin', adminRoutes);
 
 // ─── Frontend Routes ────────────────────
-const indexHtml = path.join(__dirname, '..', 'public', 'index.html');
-const appHtml = path.join(__dirname, '..', 'public', 'app.html');
-app.get('/', (req, res) => res.sendFile(indexHtml));
-app.get('/app', (req, res) => res.sendFile(appHtml));
-app.get('/app/*', (req, res) => res.sendFile(appHtml));
-app.get('/onboarding', (req, res) => res.sendFile(appHtml));
-app.get('/quiz', (req, res) => res.sendFile(appHtml));
+const appHtml        = path.join(__dirname, '..', 'public', 'app.html');
+const onboardingHtml = path.join(__dirname, '..', 'onboarding.html');
+
+app.get('/', (req, res) => res.redirect('/app'));
+app.get('/onboarding', (req, res) => res.sendFile(onboardingHtml));
+app.get('/app',        (req, res) => res.sendFile(appHtml));
+app.get('/app/*',      (req, res) => res.sendFile(appHtml));
+app.get('/quiz',       (req, res) => res.sendFile(appHtml));
 app.get('/archetype/:type', (req, res) => res.sendFile(appHtml));
-app.get('/match-day', (req, res) => res.sendFile(appHtml));
+app.get('/match-day',  (req, res) => res.sendFile(appHtml));
 app.get('/reset-password', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'reset-password.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'admin.html')));
 app.get('/checkout', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'razorpay-checkout.html')));
