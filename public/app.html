@@ -1549,7 +1549,11 @@ function navTo(id) {
 // ═══════════════════════════════════════
 (async function init() {
   const loggedIn = await loadState();
-  if (!loggedIn) return; // stay on landing
+  if (!loggedIn) {
+    // On /app path, skip marketing landing and go straight to the app
+    if (window.location.pathname.startsWith('/app')) startApp();
+    return;
+  }
 
   // Auto-start app for logged-in users
   startApp();
