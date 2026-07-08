@@ -24,7 +24,7 @@ router.get('/me', (req, res) => {
       college: user.college,
       year: user.year,
       archetype: user.archetype,
-      scores: user.scores ? JSON.parse(user.scores) : null,
+      scores: user.ecp_scores ? JSON.parse(user.ecp_scores) : null,
       gender: user.gender,
       matchPrefGender: user.match_pref_gender,
       matchPrefYear: user.match_pref_year
@@ -38,7 +38,7 @@ router.get('/me', (req, res) => {
       matchData = {
         id: match.id, day,
         currentPrompt: prompts[(day - 1) % prompts.length],
-        partner: partner ? { archetype: partner.archetype, scores: partner.scores ? JSON.parse(partner.scores) : null } : null,
+        partner: partner ? { archetype: partner.archetype, scores: partner.ecp_scores ? JSON.parse(partner.ecp_scores) : null } : null,
         startedAt: match.started_at
       };
       entriesData = stmts.getUserEntries.all(userId);
@@ -89,7 +89,7 @@ router.get('/consent', (req, res) => {
     const user = stmts.getUserById.get(req.session.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json({ consentGiven: user.consent_given === 1, consentDate: user.created_at || null });
-  } catch (e) {
+  } catch {
     res.status(500).json({ error: 'Failed to check consent' });
   }
 });
@@ -99,9 +99,9 @@ router.post('/consent/withdraw', (req, res) => {
   try {
     const user = stmts.getUserById.get(req.session.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
-    stmts.updateUser.run(user.name, user.email, user.college, user.year, user.gender, user.match_pref_gender, user.match_pref_year, 0, user.archetype, user.id);
+    stmts.updateUser.run(user.name, user.email, user.college, user.year, user.gender, user.match_pref_gender, user.match_pref_year, 0, user.archetype, user.ecp_scores, user.id);
     res.json({ ok: true, message: 'Consent withdrawn. You can still export or delete your data.' });
-  } catch (e) {
+  } catch {
     res.status(500).json({ error: 'Failed to withdraw consent' });
   }
 });
@@ -128,7 +128,7 @@ router.get('/my-data', (req, res) => {
       profile: {
         name: user.name, email: user.email, college: user.college, year: user.year,
         gender: user.gender, matchGenderPref: user.match_pref_gender, matchYearPref: user.match_pref_year,
-        archetype: user.archetype, scores: user.scores ? JSON.parse(user.scores) : null,
+        archetype: user.archetype, scores: user.ecp_scores ? JSON.parse(user.ecp_scores) : null,
         consentGiven: !!user.consent_given,
         accountCreated: user.created_at
       },

@@ -129,7 +129,7 @@ const STRIPE_PRODUCTS = {
   'second-cycle': { amount: 600, name: 'Second 21-Day Cycle', currency: 'usd' }
 };
 
-const PORT = 3005;
+const PORT = parseInt(process.env.PORT || '3005', 10);
 
 module.exports = {
   prompts, SAFETY_KEYWORDS, CONTENT_FLAGS, HELPLINES,

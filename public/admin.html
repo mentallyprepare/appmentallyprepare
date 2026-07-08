@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin — Mentally Prepare</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#08050F;color:#F8F2FF;font-family:system-ui,-apple-system,sans-serif;padding:0}
+.login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+.login-card{background:#0E0A18;border:1px solid rgba(248,242,255,0.07);border-radius:20px;padding:32px;width:100%;max-width:360px}
+.login-card h1{font-size:22px;margin-bottom:8px}
+.login-card p{color:rgba(248,242,255,0.5);font-size:13px;margin-bottom:24px}
+input{width:100%;background:#08050F;border:1px solid rgba(248,242,255,0.07);border-radius:12px;padding:12px 14px;font-size:14px;color:#F8F2FF;margin-bottom:10px}
+input:focus{outline:none;border-color:#9B4F66}
+.btn{width:100%;background:#9B4F66;color:#fff;border:none;border-radius:100px;padding:14px;font-size:14px;cursor:pointer;margin-top:8px}
+.btn:disabled{opacity:.5}
+.btn-s{background:transparent;border:1px solid rgba(248,242,255,0.07);color:rgba(248,242,255,0.6);border-radius:100px;padding:6px 14px;font-size:11px;cursor:pointer}
+.btn-s:hover{border-color:#9B4F66;color:#fff}
+.btn-danger{background:#6B2D3E;color:#fff;border:none;border-radius:100px;padding:6px 14px;font-size:11px;cursor:pointer}
+.btn-success{background:#3D6B51;color:#fff;border:none;border-radius:100px;padding:6px 14px;font-size:11px;cursor:pointer}
+.error{color:#f7b7c8;font-size:12px;margin-top:8px;text-align:center}
+.header{background:#0E0A18;border-bottom:1px solid rgba(248,242,255,0.07);padding:16px 24px;display:flex;align-items:center;justify-content:space-between}
+.header h1{font-size:16px;color:#EBB4C2}
+.header span{color:rgba(248,242,255,0.35);font-size:12px}
+.tabs{display:flex;gap:4px;padding:16px 24px 0;border-bottom:1px solid rgba(248,242,255,0.07)}
+.tab{padding:10px 18px;font-size:12px;border:none;background:transparent;color:rgba(248,242,255,0.4);cursor:pointer;border-bottom:2px solid transparent}
+.tab.active{color:#EBB4C2;border-bottom-color:#EBB4C2}
+.content{padding:24px}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.stat-card{background:#0E0A18;border:1px solid rgba(248,242,255,0.07);border-radius:16px;padding:18px}
+.stat-card .n{font-size:28px;color:#EBB4C2;font-weight:600}
+.stat-card .l{color:rgba(248,242,255,0.4);font-size:11px;margin-top:4px}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{text-align:left;color:rgba(248,242,255,0.35);padding:8px 6px;border-bottom:1px solid rgba(248,242,255,0.07);font-weight:400;letter-spacing:.5px}
+td{padding:8px 6px;border-bottom:1px solid rgba(248,242,255,0.04);vertical-align:middle}
+tr:hover td{background:rgba(248,242,255,0.02)}
+.badge{display:inline-block;padding:2px 8px;border-radius:100px;font-size:9px;letter-spacing:.3px;text-transform:uppercase}
+.badge-admin{background:rgba(137,108,181,0.2);color:#B09FCC}
+.badge-banned{background:rgba(155,79,102,0.2);color:#f7b7c8}
+.badge-flagged{background:rgba(232,200,133,0.15);color:#ecc885}
+.badge-crisis{background:rgba(212,133,154,0.2);color:#f7b7c8}
+.panel{display:none}
+.panel.active{display:block}
+.section-title{color:rgba(248,242,255,0.35);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin:20px 0 12px}
+.empty{color:rgba(248,242,255,0.25);font-size:13px;text-align:center;padding:40px}
+.spinner{margin:60px auto;width:24px;height:24px;border:2px solid rgba(248,242,255,0.07);border-top-color:#EBB4C2;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:100}
+.modal-card{background:#0E0A18;border:1px solid rgba(248,242,255,0.07);border-radius:20px;padding:24px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto}
+.modal-card h2{font-size:16px;margin-bottom:12px}
+.modal-card pre{background:#08050F;border-radius:10px;padding:14px;font-size:11px;color:rgba(248,242,255,0.6);white-space:pre-wrap;word-break:break-all;max-height:300px;overflow-y:auto;margin-bottom:12px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const API = window.location.origin;
+
+async function api(path, opts = {}) {
+  const res = await fetch(API + path, { credentials: 'include', headers: { 'Content-Type': 'application/json' }, ...opts });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
+function h(tag, attrs = {}, ...children) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'className') el.className = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2).toLowerCase(), v);
+    else el.setAttribute(k, v);
+  }
+  for (const c of children) {
+    if (typeof c === 'string') el.appendChild(document.createTextNode(c));
+    else if (c) el.appendChild(c);
+  }
+  return el;
+}
+
+function render(el) { document.getElementById('app').replaceChildren(el); }
+
+// ─── Login ──────────────────────────────────
+function renderLogin(err) {
+  const card = h('div', { className: 'login-card' },
+    h('h1', {}, 'Admin'),
+    h('p', {}, 'Sign in with your admin account.'),
+    h('input', { type: 'email', id: 'email', placeholder: 'Email', autocomplete: 'email' }),
+    h('input', { type: 'password', id: 'pw', placeholder: 'Password', autocomplete: 'current-password' }),
+    err ? h('div', { className: 'error' }, err) : null,
+    h('button', { className: 'btn', id: 'loginBtn', onClick: handleLogin }, 'Sign in')
+  );
+  render(h('div', { className: 'login-screen' }, card));
+}
+
+async function handleLogin() {
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = 'Signing in...';
+  try {
+    await api('/api/login', { method: 'POST', body: JSON.stringify({
+      email: document.getElementById('email').value,
+      password: document.getElementById('pw').value
+    })});
+    await loadDashboard();
+  } catch (e) {
+    btn.disabled = false; btn.textContent = 'Sign in';
+    renderLogin(e.message);
+  }
+}
+
+// ─── Dashboard ──────────────────────────────
+let state = { tab: 'dashboard', stats: null, users: [], matches: [], flagged: [], recent: [], reports: [] };
+
+async function loadDashboard() {
+  render(h('div', { className: 'spinner' }));
+  try {
+    const [stats, users, matches, entries, reports] = await Promise.all([
+      api('/api/admin/stats'),
+      api('/api/admin/users'),
+      api('/api/admin/matches'),
+      api('/api/admin/entries'),
+      api('/api/admin/reports'),
+    ]);
+    state = { ...state, stats, users: users.users, matches: matches.matches, flagged: entries.flagged, recent: entries.recent, reports: reports.reports };
+    renderApp();
+  } catch (e) {
+    if (e.message === 'Unauthorized' || e.message === 'Forbidden') renderLogin();
+    else render(h('div', { className: 'content' }, h('p', { className: 'error' }, e.message)));
+  }
+}
+
+function renderApp() {
+  const header = h('div', { className: 'header' },
+    h('div', {}, h('h1', {}, 'Mentally Prepare'), h('span', {}, 'Admin Panel')),
+    h('button', { className: 'btn-s', onClick: async () => { await fetch(API + '/api/logout', { method: 'POST', credentials: 'include' }); renderLogin(); } }, 'Sign out')
+  );
+
+  const tabs = h('div', { className: 'tabs' },
+    ['dashboard', 'users', 'matches', 'entries', 'reports'].map(t =>
+      h('button', { className: 'tab' + (state.tab === t ? ' active' : ''), onClick: () => { state.tab = t; renderApp(); } }, t.charAt(0).toUpperCase() + t.slice(1))
+    )
+  );
+
+  const panels = h('div', { className: 'content' },
+    h('div', { className: 'panel' + (state.tab === 'dashboard' ? ' active' : '') }, renderStats()),
+    h('div', { className: 'panel' + (state.tab === 'users' ? ' active' : '') }, renderUsers()),
+    h('div', { className: 'panel' + (state.tab === 'matches' ? ' active' : '') }, renderMatches()),
+    h('div', { className: 'panel' + (state.tab === 'entries' ? ' active' : '') }, renderEntries()),
+    h('div', { className: 'panel' + (state.tab === 'reports' ? ' active' : '') }, renderReports())
+  );
+
+  render(h('div', {}, header, tabs, panels));
+}
+
+function renderStats() {
+  if (!state.stats) return h('div', { className: 'spinner' });
+  const s = state.stats;
+  return h('div', { className: 'stats' },
+    h('div', { className: 'stat-card' }, h('div', { className: 'n' }, s.total_users), h('div', { className: 'l' }, 'Total Users')),
+    h('div', { className: 'stat-card' }, h('div', { className: 'n' }, s.users_with_archetype), h('div', { className: 'l' }, 'With Archetype')),
+    h('div', { className: 'stat-card' }, h('div', { className: 'n' }, s.active_matches), h('div', { className: 'l' }, 'Active Matches')),
+    h('div', { className: 'stat-card' }, h('div', { className: 'n' }, s.total_entries), h('div', { className: 'l' }, 'Total Entries')),
+    h('div', { className: 'stat-card' }, h('div', { className: 'n' }, s.flagged_entries), h('div', { className: 'l' }, 'Flagged Entries')),
+    h('div', { className: 'stat-card' }, h('div', { className: 'n' }, s.total_reports), h('div', { className: 'l' }, 'Reports')),
+    h('div', { className: 'stat-card' }, h('div', { className: 'n' }, s.paid_purchases), h('div', { className: 'l' }, 'Purchases')),
+    h('div', { className: 'stat-card' }, h('div', { className: 'n' }, s.waitlist_count), h('div', { className: 'l' }, 'Waitlist')),
+  );
+}
+
+function renderUsers() {
+  if (!state.users.length) return h('div', { className: 'empty' }, 'No users yet');
+  return h('div', {},
+    h('div', { style: 'overflow-x:auto' },
+      h('table', {},
+        h('thead', {}, h('tr', {},
+          ['Name', 'Email', 'College', 'Role', 'Archetype', 'Match', 'Joined', 'Actions'].map(t => h('th', {}, t))
+        )),
+        h('tbody', {}, state.users.map(u => {
+          const rowClass = u.role === 'banned' ? 'style="opacity:.5"' : '';
+          return h('tr', {},
+            h('td', {}, u.name),
+            h('td', {}, h('span', { style: 'color:rgba(248,242,255,0.5)' }, u.email)),
+            h('td', {}, u.college === '—' ? '-' : u.college),
+            h('td', {},
+              u.role === 'admin' ? h('span', { className: 'badge badge-admin' }, 'Admin') :
+              u.role === 'banned' ? h('span', { className: 'badge badge-banned' }, 'Banned') : 'user'
+            ),
+            h('td', {}, u.archetype || '-'),
+            h('td', {}, u.match ? (u.match.active ? 'Day ' + Math.ceil((Date.now() - new Date(u.match.started_at).getTime()) / 86400000) : 'Inactive') : '-'),
+            h('td', { style: 'color:rgba(248,242,255,0.35);font-size:10px' }, new Date(u.created_at).toLocaleDateString()),
+            h('td', {},
+              u.role === 'admin' ? '-' :
+              u.role === 'banned'
+                ? h('button', { className: 'btn-success', onClick: () => unbanUser(u.id) }, 'Unban')
+                : h('button', { className: 'btn-danger', onClick: () => banUser(u.id) }, 'Ban')
+            )
+          );
+        }))
+      )
+    )
+  );
+}
+
+async function banUser(id) { await api('/api/admin/users/' + id + '/ban', { method: 'POST' }); await loadDashboard(); }
+async function unbanUser(id) { await api('/api/admin/users/' + id + '/unban', { method: 'POST' }); await loadDashboard(); }
+
+function renderMatches() {
+  if (!state.matches.length) return h('div', { className: 'empty' }, 'No matches yet');
+  return h('div', {},
+    h('div', { style: 'overflow-x:auto' },
+      h('table', {},
+        h('thead', {}, h('tr', {},
+          ['User 1', 'User 2', 'Active', 'Started', 'Days', 'Actions'].map(t => h('th', {}, t))
+        )),
+        h('tbody', {}, state.matches.map(m => {
+          const days = Math.ceil((Date.now() - new Date(m.started_at).getTime()) / 86400000);
+          return h('tr', {},
+            h('td', {}, m.user1_name),
+            h('td', {}, m.user2_name),
+            h('td', {}, m.active ? h('span', { style: 'color:#659179' }, 'Active') : 'Inactive'),
+            h('td', { style: 'color:rgba(248,242,255,0.35);font-size:10px' }, new Date(m.started_at).toLocaleDateString()),
+            h('td', {}, String(days)),
+            h('td', {},
+              h('button', { className: 'btn-danger', onClick: () => resetMatch(m.id) }, 'Reset')
+            )
+          );
+        }))
+      )
+    )
+  );
+}
+
+async function resetMatch(id) {
+  if (!confirm('Reset this match? This cannot be undone.')) return;
+  await api('/api/admin/matches/' + id + '/reset', { method: 'POST' });
+  await loadDashboard();
+}
+
+function renderEntries() {
+  const flagged = state.flagged;
+  const recent = state.recent;
+  const frag = document.createDocumentFragment();
+  
+  if (flagged.length) {
+    frag.appendChild(h('div', { className: 'section-title' }, 'Flagged Entries (' + flagged.length + ')'));
+    frag.appendChild(h('div', { style: 'overflow-x:auto' },
+      h('table', {},
+        h('thead', {}, h('tr', {}, ['User', 'Day', 'Flags', 'Text', 'Date'].map(t => h('th', {}, t)))),
+        h('tbody', {}, flagged.map(e =>
+          h('tr', {},
+            h('td', {}, e.user_name),
+            h('td', {}, 'Day ' + e.day_number),
+            h('td', {},
+              (e.crisis_flag ? h('span', { className: 'badge badge-crisis' }, 'Crisis ') : '') +
+              (e.pii_flag ? h('span', { className: 'badge badge-flagged' }, ' PII') : '')
+            ),
+            h('td', {}, h('span', { style: 'color:rgba(248,242,255,0.6);cursor:pointer', onClick: () => showEntryDetail(e) }, e.text.slice(0, 60) + '...')),
+            h('td', { style: 'color:rgba(248,242,255,0.35);font-size:10px' }, new Date(e.created_at).toLocaleDateString())
+          )
+        ))
+      )
+    ));
+  }
+
+  frag.appendChild(h('div', { className: 'section-title' }, 'Recent Entries'));
+  if (!recent.length) {
+    frag.appendChild(h('div', { className: 'empty' }, 'No entries yet'));
+  } else {
+    frag.appendChild(h('div', { style: 'overflow-x:auto' },
+      h('table', {},
+        h('thead', {}, h('tr', {}, ['User', 'Day', 'Text', 'Date'].map(t => h('th', {}, t)))),
+        h('tbody', {}, recent.map(e =>
+          h('tr', {},
+            h('td', {}, e.user_name),
+            h('td', {}, 'Day ' + e.day_number),
+            h('td', {}, h('span', { style: 'color:rgba(248,242,255,0.6)' }, e.text.slice(0, 80) + '...')),
+            h('td', { style: 'color:rgba(248,242,255,0.35);font-size:10px' }, new Date(e.created_at).toLocaleDateString())
+          )
+        ))
+      )
+    ));
+  }
+  return frag;
+}
+
+function showEntryDetail(e) {
+  const overlay = h('div', { className: 'modal', onClick: (ev) => { if (ev.target === overlay) overlay.remove(); } },
+    h('div', { className: 'modal-card' },
+      h('h2', {}, 'Entry — Day ' + e.day_number),
+      h('p', { style: 'color:rgba(248,242,255,0.5);font-size:12px;margin-bottom:12px' }, 'By ' + e.user_name + ' (' + e.user_email + ')'),
+      h('pre', {}, e.text),
+      h('div', { style: 'color:rgba(248,242,255,0.35);font-size:11px;margin-bottom:12px' },
+        'Mood: ' + (e.mood || '—') + ' | Prompt: ' + e.prompt
+      ),
+      h('button', { className: 'btn-s', onClick: () => overlay.remove() }, 'Close')
+    )
+  );
+  document.body.appendChild(overlay);
+}
+
+function renderReports() {
+  if (!state.reports.length) return h('div', { className: 'empty' }, 'No reports');
+  return h('div', {},
+    h('div', { style: 'overflow-x:auto' },
+      h('table', {},
+        h('thead', {}, h('tr', {}, ['User', 'Reported Day', 'Reason', 'Date', 'Actions'].map(t => h('th', {}, t)))),
+        h('tbody', {}, state.reports.map(r =>
+          h('tr', {},
+            h('td', {}, r.user_name),
+            h('td', {}, 'Day ' + r.reported_day),
+            h('td', { style: 'color:rgba(248,242,255,0.6)' }, r.reason),
+            h('td', { style: 'color:rgba(248,242,255,0.35);font-size:10px' }, new Date(r.created_at).toLocaleDateString()),
+            h('td', {},
+              h('button', { className: 'btn-s', onClick: () => dismissReport(r.id) }, 'Dismiss')
+            )
+          )
+        ))
+      )
+    )
+  );
+}
+
+async function dismissReport(id) {
+  await api('/api/admin/reports/' + id, { method: 'DELETE' });
+  await loadDashboard();
+}
+
+// ─── Start ──────────────────────────────────
+(async () => {
+  try {
+    await api('/api/admin/stats');
+    await loadDashboard();
+  } catch {
+    renderLogin();
+  }
+})();
+</script>
+</body>
+</html>

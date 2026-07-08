@@ -1,0 +1,1307 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Mentally Prepare — Prototype</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   DESIGN TOKENS
+   ═══════════════════════════════════════════ */
+:root{
+  --bg:#09070F;--bgL:#120D1D;--card:#191321;--cardS:rgba(31,23,43,0.78);
+  --paper:#F1EAE1;--ink:#F5EFF7;--inkM:rgba(245,239,247,0.72);
+  --inkS:rgba(245,239,247,0.46);--inkPaper:#211B22;--inkPaperM:#6D6269;
+  --rose:#D3A0B1;--mauve:#AE8BC2;--gold:#D0B278;--green:#789889;--warn:#C87982;
+  --line:rgba(245,239,247,0.08);--lineS:rgba(245,239,247,0.04);
+  --fontSerif:'Cormorant Garamond',serif;--fontSans:'Inter',sans-serif;
+  --rSm:8px;--rMd:14px;--rLg:20px;--rXl:28px;
+  --phoneW:375px;--phoneH:812px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{background:#06040A;color:var(--ink);font-family:var(--fontSans);-webkit-font-smoothing:antialiased}
+body{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:16px;overflow-x:hidden}
+
+/* ── Star field canvas ── */
+#starCanvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+
+/* ── 3D Perspective container ── */
+.perspective-wrap{perspective:1200px;perspective-origin:50% 40%;z-index:1;position:relative}
+.phone-tilt{transition:transform .08s ease-out;transform-style:preserve-3d;will-change:transform}
+
+/* ── Improved transitions ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px) scale(0.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes pageFold{from{opacity:0;transform:rotateX(-5deg) translateY(20px);transform-origin:top center}to{opacity:1;transform:rotateX(0) translateY(0)}}
+@keyframes constPulse{0%,100%{box-shadow:0 0 8px rgba(208,178,120,0.2)}50%{box-shadow:0 0 20px rgba(208,178,120,0.4)}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes breathe{0%,100%{opacity:0.3}50%{opacity:0.6}}
+
+/* ── Page header ── */
+.page-header{text-align:center;padding:20px 16px 16px;max-width:900px;width:100%}
+.page-header h1{font-family:var(--fontSerif);font-size:26px;font-weight:400;color:var(--rose);letter-spacing:-0.3px}
+.page-header p{font-size:12px;color:var(--inkM);margin-top:3px}
+.mode-toggle{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px;margin-top:12px}
+.mode-btn{padding:7px 18px;border-radius:999px;border:none;background:transparent;color:var(--inkM);font-size:12px;font-family:inherit;cursor:pointer;transition:all .2s}
+.mode-btn.active{background:var(--rose);color:var(--bg);font-weight:500}
+
+/* ── Overview Grid ── */
+.overview-grid{display:none;max-width:960px;width:100%;padding:0 8px 40px}
+.overview-grid.active{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:18px}
+.mini-phone{background:var(--bg);border-radius:22px;overflow:hidden;aspect-ratio:375/812;box-shadow:0 4px 20px rgba(0,0,0,0.5),0 0 0 1px rgba(255,255,255,0.04);position:relative;cursor:pointer;transition:transform .25s,box-shadow .25s}
+.mini-phone:hover{transform:translateY(-3px);box-shadow:0 8px 32px rgba(0,0,0,0.6),0 0 0 1px rgba(211,160,177,0.12)}
+.mini-phone .m-notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:60px;height:14px;background:#06040A;border-radius:0 0 8px 8px;z-index:10}
+.mini-phone .m-bar{position:absolute;top:2px;left:0;right:0;display:flex;justify-content:space-between;padding:0 12px;font-size:6px;color:var(--inkM);z-index:9}
+.mini-phone .m-home{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:50px;height:2px;border-radius:2px;background:var(--inkS);z-index:10}
+.mini-phone .m-content{padding:18px 8px 14px;height:100%;display:flex;flex-direction:column;font-size:7px;line-height:1.3;color:var(--ink);overflow:hidden}
+.mini-phone .m-label{position:absolute;bottom:-20px;left:0;right:0;text-align:center;font-size:9px;color:var(--inkS);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── Phone frame ── */
+.phone-wrap{display:none;flex-direction:column;align-items:center;padding-bottom:40px;position:relative}
+.phone-wrap::before{content:'';position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(211,160,177,0.06) 0%,rgba(174,139,194,0.03) 40%,transparent 70%);pointer-events:none;z-index:-1}
+.phone-wrap.active{display:flex}
+.phone{width:var(--phoneW);height:var(--phoneH);background:var(--bg);border-radius:44px;overflow:hidden;position:relative;box-shadow:0 0 0 1px rgba(255,255,255,0.06),0 20px 80px rgba(0,0,0,0.7),0 4px 24px rgba(0,0,0,0.4)}
+.phone::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;border-radius:44px;pointer-events:none;background:linear-gradient(160deg,rgba(255,255,255,0.03) 0%,transparent 30%,transparent 70%,rgba(0,0,0,0.1) 100%);z-index:101}
+.phone-notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:150px;height:30px;background:#06040A;border-radius:0 0 18px 18px;z-index:100;display:flex;align-items:center;justify-content:center;gap:8px}
+.phone-notch .spkr{width:36px;height:4px;border-radius:2px;background:var(--card)}
+.phone-notch .cam{width:8px;height:8px;border-radius:50%;background:var(--bg);border:1px solid var(--card)}
+.phone-bar{position:absolute;top:8px;left:0;right:0;display:flex;justify-content:space-between;padding:0 28px;font-size:10px;color:var(--inkM);z-index:99;height:18px;align-items:center;font-weight:500}
+.phone-bar .right{display:flex;gap:3px;font-size:8px}
+.phone-home{position:absolute;bottom:7px;left:50%;transform:translateX(-50%);width:130px;height:5px;border-radius:3px;background:var(--inkS);z-index:100}
+
+/* ── Screens ── */
+.screen{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;overflow:hidden}
+.screen.active{display:flex;animation:fadeUp .35s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.screen-content{flex:1;overflow-y:auto;padding:50px 20px 24px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.screen-content::-webkit-scrollbar{display:none}
+
+/* ── Typography ── */
+.editorial{font-family:var(--fontSerif);font-weight:400;color:var(--ink)}
+.editorial em{font-style:italic;color:var(--inkM)}
+h1{font-family:var(--fontSerif);font-size:30px;font-weight:400;color:var(--ink);line-height:1.2}
+h2{font-family:var(--fontSerif);font-size:24px;font-weight:400;color:var(--ink);line-height:1.25}
+h3{font-size:16px;font-weight:500;color:var(--ink)}
+p{font-size:14px;color:var(--inkM);line-height:1.6}
+.sub{font-size:13px;color:var(--inkM)}
+.label{font-size:10px;color:var(--inkS);letter-spacing:1.5px;text-transform:uppercase}
+.label-accent{font-size:10px;color:var(--rose);letter-spacing:1.5px;text-transform:uppercase}
+
+/* ── Buttons ── */
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 24px;border-radius:var(--rMd);font-size:14px;font-weight:500;border:none;cursor:pointer;font-family:inherit;width:100%;transition:transform .15s,box-shadow .15s;position:relative;overflow:hidden}
+.btn:active{transform:scale(0.97)}
+.btn-ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,0.15);transform:scale(0);animation:ripple .5s ease-out;pointer-events:none}
+@keyframes ripple{to{transform:scale(4);opacity:0}}
+.btn-primary{background:var(--rose);color:var(--bg)}
+.btn-secondary{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+.btn-ghost{background:transparent;color:var(--inkM)}
+.btn-destructive{background:transparent;color:var(--warn)}
+.btn-sm{padding:10px 16px;font-size:12px;width:auto}
+
+/* ── Form ── */
+.form-group{margin-bottom:14px}
+.form-label{display:block;font-size:10px;color:var(--inkS);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px}
+.form-input{width:100%;padding:12px 14px;border-radius:var(--rSm);background:var(--card);border:1px solid var(--line);color:var(--ink);font-size:14px;font-family:inherit;outline:none;transition:border-color .2s}
+.form-input:focus{border-color:var(--rose)}
+.form-input::placeholder{color:var(--inkS)}
+textarea.form-input{resize:none;line-height:1.6}
+
+/* ── Editor Surface (Warm Paper) ── */
+.editor{padding:20px;border-radius:var(--rLg);background:var(--paper);position:relative}
+.editor textarea{width:100%;min-height:200px;background:transparent;border:none;color:var(--inkPaper);font-size:16px;font-family:var(--fontSerif);line-height:1.7;outline:none;resize:none}
+.editor textarea::placeholder{color:var(--inkPaperM)}
+
+/* ── Choice Row ── */
+.choice-row{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:var(--rSm);background:var(--card);border:1px solid var(--line);cursor:pointer;transition:all .15s}
+.choice-row:active{transform:scale(0.98)}
+.choice-row.active{border-color:var(--rose);background:rgba(211,160,177,0.06)}
+.choice-row .c-icon{font-size:16px;width:24px;text-align:center;flex-shrink:0;color:var(--inkM)}
+.choice-row .c-text{flex:1}
+.choice-row .c-text .c-title{font-size:14px;color:var(--ink)}
+.choice-row .c-text .c-sub{font-size:12px;color:var(--inkS);margin-top:2px}
+
+/* ─── Cards ─── */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--rMd);padding:16px}
+.card-soft{box-shadow:0 0 40px rgba(211,160,177,0.06)}
+.card-paper{background:var(--paper);color:var(--inkPaper);border:none}
+
+/* ─── Constellation Progress ─── */
+.constellation{width:100%;height:60px;position:relative;display:flex;align-items:center;justify-content:space-between;padding:0 10px}
+.const-point{width:10px;height:10px;border-radius:50%;background:var(--card);border:1px solid var(--line);position:relative;z-index:2;transition:all .4s cubic-bezier(0.34,1.56,0.64,1)}
+.const-point.done{background:var(--gold);border-color:var(--gold);box-shadow:0 0 12px rgba(208,178,120,0.3);animation:constPulse 3s ease-in-out infinite}
+.const-point.active{border-color:var(--rose);background:transparent;box-shadow:0 0 0 2px var(--rose);animation:constPulse 2s ease-in-out infinite}
+.const-point.future{opacity:0.2}
+.const-line{position:absolute;top:50%;left:10px;right:10px;height:1px;background:var(--lineS);z-index:1;transform:translateY(-50%)}
+.const-line .fill{height:100%;background:var(--gold);transition:width .8s cubic-bezier(0.4,0,0.2,1);border-radius:1px;box-shadow:0 0 6px rgba(208,178,120,0.2)}
+
+/* ─── Tab Bar ─── */
+.tab-bar{position:absolute;bottom:0;left:0;right:0;height:64px;background:rgba(9,7,15,0.97);border-top:1px solid var(--lineS);display:flex;align-items:center;justify-content:space-around;padding-bottom:14px;z-index:50;backdrop-filter:blur(16px)}
+.tab-item{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:4px 10px;border:none;background:none;font-family:inherit;transition:opacity .15s}
+.tab-item:active{opacity:0.6}
+.tab-item .tab-icon{font-size:18px;color:var(--inkS);transition:color .2s}
+.tab-item.active .tab-icon{color:var(--rose)}
+.tab-item .tab-label{font-size:9px;color:var(--inkS);transition:color .2s;letter-spacing:.3px}
+.tab-item.active .tab-label{color:var(--rose);font-weight:500}
+
+/* ─── Back ─── */
+.back-wrap{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.back-btn{width:34px;height:34px;border-radius:var(--rSm);background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--inkM);transition:background .12s;flex-shrink:0;user-select:none}
+.back-btn:active{background:var(--bgL)}
+
+/* ─── Steps ─── */
+.steps{display:flex;justify-content:center;align-items:center;gap:6px;margin-bottom:20px}
+.step-dot{width:24px;height:24px;border-radius:var(--rSm);background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--inkS);transition:all .2s}
+.step-dot.active{border-color:var(--rose);color:var(--rose)}
+.step-dot.done{background:var(--rose);border-color:var(--rose);color:var(--bg)}
+
+/* ─── Progress Bar ─── */
+.progress-track{height:2px;background:var(--lineS);border-radius:1px;margin-bottom:20px;overflow:hidden}
+.progress-fill{height:100%;background:var(--rose);border-radius:1px;transition:width .5s ease}
+
+/* ─── Mood Selector ─── */
+.mood-row{display:flex;gap:8px;overflow-x:auto;padding:4px 0;scrollbar-width:none}
+.mood-row::-webkit-scrollbar{display:none}
+.mood-opt{flex-shrink:0;width:44px;height:44px;border-radius:var(--rSm);background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;transition:all .15s}
+.mood-opt:active{transform:scale(0.92)}
+.mood-opt.active{border-color:var(--gold);background:rgba(208,178,120,0.1)}
+
+/* ─── Note Card ─── */
+.note-card{padding:20px;border-radius:var(--rLg);background:var(--paper);position:relative;cursor:pointer;transition:transform .15s}
+.note-card:active{transform:scale(0.98)}
+.note-card .nc-label{font-size:9px;color:var(--inkPaperM);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+.note-card .nc-text{font-family:var(--fontSerif);font-size:16px;color:var(--inkPaper);line-height:1.6;font-style:italic}
+.note-card .nc-seal{position:absolute;top:16px;right:16px;font-size:14px;color:var(--gold)}
+.note-card .nc-time{font-size:10px;color:var(--inkPaperM);margin-top:8px}
+
+/* ─── Notif Row ─── */
+.notif-row{display:flex;gap:12px;padding:14px;border-radius:var(--rSm);cursor:pointer;transition:background .15s}
+.notif-row:active{background:var(--bgL)}
+.notif-row.unread{border-left:2px solid var(--rose);padding-left:12px}
+.notif-row .n-icon{font-size:16px;flex-shrink:0;width:24px;text-align:center;margin-top:1px}
+.notif-row .n-body{flex:1}
+.notif-row .n-title{font-size:14px;color:var(--ink);font-weight:500}
+.notif-row .n-text{font-size:12px;color:var(--inkM);line-height:1.4;margin-top:2px}
+.notif-row .n-time{font-size:10px;color:var(--inkS);margin-top:4px}
+
+/* ─── Setting Row ─── */
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--lineS);cursor:pointer;transition:background .1s;margin:0 -6px;padding:14px 6px;border-radius:6px}
+.setting-row:last-child{border-bottom:none}
+.setting-row:active{background:var(--card)}
+.setting-row .sl{display:flex;align-items:center;gap:12px}
+.setting-row .s-icon{font-size:16px;width:22px;text-align:center;color:var(--inkM)}
+
+/* ─── Toggle ─── */
+.toggle{width:40px;height:22px;border-radius:11px;background:var(--line);cursor:pointer;position:relative;transition:background .25s cubic-bezier(0.4,0,0.2,1);flex-shrink:0}
+.toggle.on{background:var(--green)}
+.toggle .thumb{width:18px;height:18px;border-radius:50%;background:var(--ink);position:absolute;top:2px;left:2px;transition:transform .3s cubic-bezier(0.34,1.56,0.64,1);box-shadow:0 1px 4px rgba(0,0,0,0.2)}
+.toggle.on .thumb{transform:translateX(18px)}
+
+/* ─── Arena Item ─── */
+.arena-item{padding:14px;border-radius:var(--rSm);background:var(--card);border:1px solid var(--line);cursor:pointer;transition:all .15s}
+.arena-item:active{transform:scale(0.98)}
+.arena-item .a-icon{font-size:16px;margin-bottom:4px}
+.arena-item .a-name{font-size:14px;color:var(--ink);font-weight:500}
+.arena-item .a-sub{font-size:12px;color:var(--inkS);margin-top:2px}
+.arena-item .a-count{font-size:10px;color:var(--rose);margin-top:4px}
+
+/* ─── Silent Room Entry ─── */
+.sentry{padding:14px 0;border-bottom:1px solid var(--lineS)}
+.sentry:last-child{border-bottom:none}
+.sentry .s-line{font-family:var(--fontSerif);font-size:15px;color:var(--ink);font-style:italic;line-height:1.5}
+.sentry .s-meta{display:flex;gap:12px;margin-top:6px;font-size:10px;color:var(--inkS)}
+
+/* ─── Info Panel ─── */
+.info-panel{padding:20px;border-radius:var(--rMd);background:var(--card);border:1px solid var(--line);font-size:13px;color:var(--inkM);line-height:1.7}
+.info-panel.danger{border-color:rgba(200,121,130,0.2)}
+
+/* ─── Toast ─── */
+.toast{position:absolute;bottom:80px;left:20px;right:20px;padding:12px 16px;border-radius:var(--rSm);font-size:13px;z-index:200;display:none;align-items:center;gap:8px;font-weight:500;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 4px 16px rgba(0,0,0,0.3)}
+.toast.success{background:rgba(120,152,137,0.2);border:1px solid rgba(120,152,137,0.3);color:var(--green)}
+.toast.error{background:rgba(200,121,130,0.2);border:1px solid rgba(200,121,130,0.3);color:var(--warn)}
+@keyframes toastUp{from{opacity:0;transform:translateY(16px) scale(0.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+/* ─── Spinner ─── */
+.spinner{width:20px;height:20px;border:2px solid var(--line);border-top-color:var(--rose);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ─── Backdrop grain ─── */
+.grain{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:0.18;mix-blend-mode:soft-light;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");background-size:256px 256px}
+
+/* ─── Utilities ─── */
+.flex-1{flex:1}
+.flex{display:flex}
+.flex-col{flex-direction:column}
+.center{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px}
+.gap-sm{display:flex;flex-direction:column;gap:8px}
+.gap-md{display:flex;flex-direction:column;gap:14px}
+.gap-lg{display:flex;flex-direction:column;gap:20px}
+.mt-sm{margin-top:8px}.mt-md{margin-top:16px}.mt-lg{margin-top:24px}.mt-xl{margin-top:32px}
+.mb-sm{margin-bottom:8px}.mb-md{margin-bottom:16px}
+.text-center{text-align:center}
+.row{display:flex;gap:8px}.row-wrap{display:flex;flex-wrap:wrap;gap:8px}
+.pr-4{padding-right:4px}.pl-4{padding-left:4px}
+
+/* ─── Responsive ─── */
+@media(max-width:420px){
+  body{padding:0}
+  .page-header{padding:12px 12px 8px}.page-header h1{font-size:20px}
+  .phone{width:100vw;height:100dvh;border-radius:0;box-shadow:none}
+  .phone-notch,.phone-bar,.phone-home,.mini-phone .m-notch,.mini-phone .m-bar,.mini-phone .m-home{display:none}
+  .screen-content{padding-top:18px}.tab-bar{height:60px;padding-bottom:8px}.toast{bottom:72px}
+}
+</style>
+</head>
+<body>
+
+<canvas id="starCanvas"></canvas>
+
+<div class="page-header">
+  <h1>Mentally Prepare</h1>
+  <p>21-night anonymous emotional writing ritual</p>
+  <div class="mode-toggle">
+    <button class="mode-btn active" onclick="setMode('interactive')">📱 Interactive</button>
+    <button class="mode-btn" onclick="setMode('overview')">🖼️ Gallery</button>
+  </div>
+</div>
+
+<!-- ═══ GALLERY OVERVIEW ═══ -->
+<div class="overview-grid" id="overviewGrid"></div>
+
+<!-- ═══ INTERACTIVE PHONE ═══ -->
+<div class="phone-wrap active" id="phoneWrap">
+<div class="perspective-wrap"><div class="phone-tilt">
+<div class="phone">
+  <div class="phone-notch"><div class="spkr"></div><div class="cam"></div></div>
+  <div class="phone-bar"><span>9:41</span><span class="right">●●●●</span></div>
+  <div class="grain"></div>
+
+  <!-- Screen data populated by JS -->
+  <div id="screenContainer"></div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+</div>
+</div></div>
+
+<script>
+// ═══════════════════════════════════════════════
+// SCREEN DEFINITIONS
+// ═══════════════════════════════════════════════
+
+const SCREENS = {};
+
+// ─── Helper ───
+function h(s){return `<div class="screen-content">${s}</div>`}
+function back(id){return `<div class="back-wrap"><div class="back-btn" onclick="goTo('${id}')">←</div></div>`}
+function btn(text,action,cls='btn-primary'){return `<button class="btn ${cls}" onclick="${action}">${text}</button>`}
+function gap(content){return `<div class="gap-sm">${content}</div>`}
+function label(text){return `<div class="label mb-sm">${text}</div>`}
+function spacer(){return `<div class="flex-1"></div>`}
+function constellation(done,active,total=21){
+  let pts='',pct=done/total*100;
+  for(let i=1;i<=total;i++){
+    let cls='const-point';
+    if(i<=done)cls+=' done';else if(i===active)cls+=' active';else cls+=' future';
+    pts+=`<div class="${cls}"></div>`;
+  }
+  return `<div class="constellation">${pts}<div class="const-line"><div class="fill" style="width:${pct}%"></div></div></div>`;
+}
+
+// ═══════════════════════════════════════════════
+// SCREENS
+// ═══════════════════════════════════════════════
+
+// 1. Splash
+SCREENS.splash = h(`
+<div class="center" style="flex:1;padding-bottom:80px">
+  <div class="spinner" style="margin-bottom:20px"></div>
+  <div style="font-family:var(--fontSerif);font-size:24px;color:var(--rose)">Mentally Prepare</div>
+  <div class="sub">One honest night at a time.</div>
+</div>
+`);
+
+// 2. Welcome
+SCREENS.welcome = h(`
+<div class="center" style="flex:1;padding-bottom:40px">
+  <div style="margin-bottom:16px">
+    <div style="width:80px;height:80px;border-radius:50%;border:1px solid var(--lineS);display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+      <div style="width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 20px rgba(208,178,120,0.3)"></div>
+      <div style="width:6px;height:6px;border-radius:50%;background:var(--rose);margin-left:-4px;margin-top:-12px;opacity:0.5"></div>
+    </div>
+    <h1>You do not have to<br>explain everything<br><em>tonight.</em></h1>
+    <p style="max-width:300px;margin-top:12px">For 21 nights, write honestly to someone you may never meet.</p>
+  </div>
+  ${spacer()}
+  <div class="gap-sm" style="width:100%">
+    ${btn('Begin tonight','goTo(\'promise\')','btn-primary')}
+    ${btn('I already have an account','goTo(\'login\')','btn-ghost')}
+  </div>
+</div>
+`);
+
+// 3. Product Promise
+SCREENS.promise = h(`
+<div class="center" style="flex:1">
+  <div class="label mb-md">How it works</div>
+  <div class="gap-lg" style="width:100%;max-width:300px">
+    <div style="text-align:center">
+      <div style="width:40px;height:40px;border-radius:var(--rSm);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:16px;color:var(--gold)}">✎</div>
+      <div class="editorial" style="font-size:16px">Write one honest note</div>
+      <div class="sub" style="margin-top:4px">Each night, one sealed page for your partner.</div>
+    </div>
+    <div style="text-align:center">
+      <div style="width:40px;height:40px;border-radius:var(--rSm);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:16px;color:var(--rose)}">✉</div>
+      <div class="editorial" style="font-size:16px">Receive one anonymous note</div>
+      <div class="sub" style="margin-top:4px">Someone else's honest page, written for you.</div>
+    </div>
+    <div style="text-align:center">
+      <div style="width:40px;height:40px;border-radius:var(--rSm);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:16px;color:var(--mauve)}">⇌</div>
+      <div class="editorial" style="font-size:16px">Decide together on Day 21</div>
+      <div class="sub" style="margin-top:4px">Reveal yourselves — or stay anonymous forever.</div>
+    </div>
+  </div>
+  ${spacer()}
+  ${btn('Continue','goTo(\'name\')','btn-primary')}
+</div>
+`);
+
+// 4. Name
+SCREENS.name = h(`
+<div class="center" style="flex:1">
+  <h2>What should this space call you?</h2>
+  <p class="sub">This stays private. Your partner will not see it.</p>
+  <div style="width:100%;margin-top:16px">
+    <div class="form-label">Your name</div>
+    <input class="form-input" placeholder="Your name" id="nameInput">
+  </div>
+  ${spacer()}
+  ${btn('Continue','goTo(\'intention\')','btn-primary')}
+</div>
+`);
+
+// 5. Intention
+SCREENS.intention = h(`
+<div class="progress-track"><div class="progress-fill" style="width:25%"></div></div>
+<h2 class="mb-md">Why are you here tonight?</h2>
+<div class="gap-sm">
+  ${['I need somewhere to be honest','I feel unseen','I want to understand myself','I want to feel less alone','I am not sure yet'].map((t,i)=>{
+    const icons=['✎','○','◑','◡','·'];
+    return `<div class="choice-row" onclick="selectChoice(this,'intentionNext')">
+      <div class="c-icon">${icons[i]}</div>
+      <div class="c-text"><div class="c-title">${t}</div></div>
+    </div>`;
+  }).join('')}
+</div>
+<button class="btn btn-primary mt-lg" id="intentionNext" disabled onclick="goTo('safety')">Continue</button>
+`);
+
+// 6. Safety
+SCREENS.safety = h(`
+<div class="center" style="flex:1">
+  <div style="width:48px;height:48px;border-radius:var(--rSm);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:20px;color:var(--mauve)}">◈</div>
+  <h2>Before we begin</h2>
+  <div class="info-panel" style="text-align:left;margin-top:12px">
+    <div style="margin-bottom:10px">• Both of you remain anonymous</div>
+    <div style="margin-bottom:10px">• Either person can block or report at any time</div>
+    <div style="margin-bottom:10px">• You must be 18 or older</div>
+    <div style="margin-bottom:10px">• This is not crisis support — we provide helpline resources</div>
+    <div style="margin-bottom:10px">• Do not share personal contact information</div>
+    <div>• Identity is shared only with mutual consent</div>
+  </div>
+  ${spacer()}
+  ${btn('I understand','goTo(\'notif-perm\')','btn-primary')}
+</div>
+`);
+
+// 7. Notification permission
+SCREENS['notif-perm'] = h(`
+<div class="center" style="flex:1">
+  <div style="font-size:24px;margin-bottom:12px;color:var(--inkM)}">♫</div>
+  <h2>Would you like a quiet reminder each night?</h2>
+  <p class="sub">We will only remind you about your note, your partner, and important safety updates.</p>
+  ${spacer()}
+  <div class="gap-sm" style="width:100%">
+    ${btn('Allow reminders','goTo(\'archetype-intro\')','btn-primary')}
+    ${btn('Not now','goTo(\'archetype-intro\')','btn-ghost')}
+  </div>
+</div>
+`);
+
+// 8. Archetype intro
+SCREENS['archetype-intro'] = h(`
+<div class="center" style="flex:1">
+  <div class="label-accent mb-sm">Your reflection archetype</div>
+  <h2 class="mb-sm">Not a label —<br>a <em>pattern</em>.</h2>
+  <p>Based on how you respond, we will describe how you tend to hold emotion. This helps your partner understand your writing voice.</p>
+  <div class="info-panel mt-md">
+    <div style="font-size:13px;color:var(--inkM);line-height:1.7">
+      Your archetype is not your identity. It is a starting point for the conversation.
+    </div>
+  </div>
+  ${spacer()}
+  ${btn('Begin the questions',"goTo('archetype-q1')",'btn-primary')}
+</div>
+`);
+
+// 9-10: Archetype questionnaire (3 questions, then result)
+SCREENS['archetype-q1'] = h(`
+<div class="progress-track"><div class="progress-fill" style="width:33%"></div></div>
+<h2 class="mb-md">When something weighs on you, what do you usually do first?</h2>
+<div class="gap-sm">
+  ${['Write it down to make sense of it','Talk to someone I trust','Sit with it quietly until it passes','Distract myself until I forget','I react before I think'].map(t=>
+    `<div class="choice-row" onclick="selectChoice(this,'archNext1')"><div class="c-text"><div class="c-title">${t}</div></div></div>`
+  ).join('')}
+</div>
+<button class="btn btn-primary mt-lg" id="archNext1" disabled onclick="goTo('archetype-q2')">Continue</button>
+`);
+
+SCREENS['archetype-q2'] = h(`
+<div class="progress-track"><div class="progress-fill" style="width:66%"></div></div>
+<h2 class="mb-md">In a difficult conversation, what matters most to you?</h2>
+<div class="gap-sm">
+  ${['Being honest even if it hurts','Keeping the peace','Understanding the other person','Protecting myself','Finding a resolution quickly'].map(t=>
+    `<div class="choice-row" onclick="selectChoice(this,'archNext2')"><div class="c-text"><div class="c-title">${t}</div></div></div>`
+  ).join('')}
+</div>
+<button class="btn btn-primary mt-lg" id="archNext2" disabled onclick="goTo('archetype-q3')">Continue</button>
+`);
+
+SCREENS['archetype-q3'] = h(`
+<div class="progress-track"><div class="progress-fill" style="width:100%"></div></div>
+<h2 class="mb-md">What do you most want someone to understand about you?</h2>
+<div class="gap-sm">
+  ${['That I feel deeply even when I seem quiet','That I am trying my best','That I am more than my worst moments','That I do not have all the answers','That I want to be seen'].map(t=>
+    `<div class="choice-row" onclick="selectChoice(this,'archNext3')"><div class="c-text"><div class="c-title">${t}</div></div></div>`
+  ).join('')}
+</div>
+<button class="btn btn-primary mt-lg" id="archNext3" disabled onclick="goTo('archetype-result')">See your result</button>
+`);
+
+// Archetype result
+SCREENS['archetype-result'] = h(`
+<div class="center" style="flex:1">
+  <div class="label-accent mb-sm">Your reflection archetype</div>
+  <div style="width:64px;height:64px;border-radius:var(--rSm);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;margin-bottom:8px;font-size:24px;color:var(--gold)}">◑</div>
+  <h2>The Quiet Storm</h2>
+  <p style="max-width:280px;font-style:italic;color:var(--inkM)">"You hold depth in stillness."</p>
+  <div class="info-panel mt-sm" style="text-align:left;font-size:13px">
+    <div style="margin-bottom:8px"><strong style="color:var(--ink)">Strength:</strong> You notice what others overlook.</div>
+    <div style="margin-bottom:8px"><strong style="color:var(--ink)">Protective pattern:</strong> You may stay quiet to avoid conflict.</div>
+    <div><strong style="color:var(--ink)">In writing:</strong> Your words carry weight. Each sentence lands.</div>
+  </div>
+  ${spacer()}
+  ${btn('Continue to matching',"goTo('matching')",'btn-primary')}
+</div>
+`);
+
+// 11. Matching
+SCREENS.matching = h(`
+<div class="center" style="flex:1">
+  <div style="position:relative;width:120px;height:80px;margin-bottom:16px">
+    <div id="orbitDot1" style="position:absolute;left:0;top:50%;width:8px;height:8px;border-radius:50%;background:var(--rose);transform:translateY(-50%);box-shadow:0 0 20px rgba(211,160,177,0.5);transition:all 0.8s cubic-bezier(0.34,1.56,0.64,1)"></div>
+    <div id="orbitDot2" style="position:absolute;right:0;top:50%;width:8px;height:8px;border-radius:50%;background:var(--gold);transform:translateY(-50%);opacity:0.4;transition:all 0.8s cubic-bezier(0.34,1.56,0.64,1)"></div>
+    <svg style="position:absolute;top:50%;left:10px;right:10px;height:1px;transform:translateY(-50%)" width="100" height="1">
+      <line x1="0" y1="0" x2="100" y2="0" stroke="var(--rose)" stroke-width="0.5" stroke-dasharray="2 4">
+        <animate attributeName="stroke-dashoffset" from="100" to="0" dur="1.5s" repeatCount="indefinite"/>
+      </line>
+    </svg>
+    <div id="orbitTrail" style="position:absolute;left:50%;top:50%;width:4px;height:4px;border-radius:50%;background:var(--mauve);transform:translate(-50%,-50%);opacity:0;box-shadow:0 0 12px rgba(174,139,194,0.6);transition:opacity 0.6s"></div>
+  </div>
+  <h2>Looking for someone<br>writing from a <em>similar place</em></h2>
+  <p class="sub" id="matchStatus">Keeping both of you anonymous.</p>
+  <div class="spinner mt-md"></div>
+</div>
+`);
+
+// 12. Match found
+SCREENS['match-found'] = h(`
+<div class="center" style="flex:1">
+  <div style="display:flex;gap:16px;margin-bottom:12px">
+    <div style="width:10px;height:10px;border-radius:50%;background:var(--rose);box-shadow:0 0 16px rgba(211,160,177,0.3)"></div>
+    <div style="width:10px;height:10px;border-radius:50%;background:var(--gold);opacity:0.6"></div>
+  </div>
+  <h2>You have someone to<br>write <em>beside</em>.</h2>
+  <p class="sub" style="max-width:280px">You will not know their name, face, college, or location. Tonight, you only begin.</p>
+  <div class="label-accent mt-lg">Day 01 of 21</div>
+  ${spacer()}
+  ${btn('Start Night 1',"goTo('tonight')",'btn-primary')}
+</div>
+`);
+
+// 13. Tonight dashboard
+SCREENS.tonight = h(`
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+  <div class="label-accent">Night 09 of 21</div>
+  <div style="font-size:14px;color:var(--inkM);cursor:pointer" onclick="goTo('notifs')">♫</div>
+</div>
+${constellation(6,9,21)}
+<div class="mt-md mb-md">
+  <div class="label mb-md">Tonight's prompt</div>
+  <div class="card card-soft" style="border-color:rgba(211,160,177,0.12);cursor:pointer" onclick="goTo('write')">
+    <div class="editorial" style="font-size:20px;line-height:1.3;margin-bottom:4px">"What are you carrying that nobody asked about?"</div>
+    <div class="sub" style="margin-top:8px;display:flex;justify-content:space-between">
+      <span>Write tonight's note</span>
+      <span style="color:var(--rose)}">→</span>
+    </div>
+  </div>
+</div>
+<div class="info-panel" style="font-size:12px;text-align:center;border-color:var(--lineS)">
+  Your partner has sealed their note.
+</div>
+<div class="mt-md gap-sm">
+  <div class="card" style="cursor:pointer" onclick="goTo('partner-overview')">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div><span class="sub" style="font-size:11px">Partner</span><div style="font-size:14px;color:var(--ink);margin-top:2px">They wrote last night.</div></div>
+      <span style="color:var(--inkS)}">→</span>
+    </div>
+  </div>
+  <div class="card" style="cursor:pointer" onclick="goTo('reveal-progress')">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div><span class="sub" style="font-size:11px">Reveal</span><div style="font-size:14px;color:var(--ink);margin-top:2px">12 nights until the choice.</div></div>
+      <span style="color:var(--inkS)}">→</span>
+    </div>
+  </div>
+</div>
+<div class="tab-bar" id="mainTabs"></div>
+`);
+
+// 14. Writing screen
+SCREENS.write = h(`
+${back('tonight')}
+<div class="label-accent mb-sm">Night 09 · Write freely</div>
+<h2 class="mb-md">What are you carrying<br>that nobody asked about?</h2>
+<div class="editor">
+  <textarea placeholder="There is no right way to do this. Just write what comes to mind tonight." id="writeContent"></textarea>
+</div>
+<div style="display:flex;justify-content:space-between;margin-top:8px">
+  <span class="sub" style="font-size:11px;color:var(--inkS)" id="wordCount">0 words</span>
+  <span class="sub" style="font-size:11px;color:var(--inkS)">Autosaved</span>
+</div>
+<div class="mt-lg gap-sm">
+  ${btn('Seal tonight\'s note',"goTo('seal-confirm')",'btn-primary')}
+  ${btn('Save for later','showToast(\'Draft saved\',\'success\')','btn-ghost')}
+</div>
+`);
+
+// 15. Seal confirmation
+SCREENS['seal-confirm'] = h(`
+<div class="center" style="flex:1">
+  <div style="width:48px;height:48px;border-radius:var(--rSm);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:20px;color:var(--gold)}">◈</div>
+  <h2>Ready to seal this note?</h2>
+  <p class="sub" style="max-width:280px">Once sealed, it cannot be changed. Your partner will receive it according to tonight's ritual.</p>
+  ${spacer()}
+  <div class="gap-sm" style="width:100%">
+    ${btn('Seal note',"goTo('note-sealed')",'btn-primary')}
+    ${btn('Keep writing',"goTo('write')",'btn-ghost')}
+  </div>
+</div>
+`);
+
+// 16. Note sealed
+SCREENS['note-sealed'] = h(`
+<div class="center" style="flex:1">
+  <div style="margin-bottom:12px;position:relative">
+    <div style="width:80px;height:80px;border-radius:var(--rMd);background:var(--paper);display:flex;align-items:center;justify-content:center;margin:0 auto">
+      <div style="font-size:24px;color:var(--gold)}">◈</div>
+    </div>
+    <div style="position:absolute;bottom:0;right:-4px;width:12px;height:12px;border-radius:50%;background:var(--gold);opacity:0.3;box-shadow:0 0 20px rgba(208,178,120,0.2)"></div>
+  </div>
+  <h2>Tonight's note is sealed.</h2>
+  <p class="sub" style="max-width:280px">You showed up. That is enough for tonight.</p>
+  <div class="mt-md label-accent">Your partner will receive it at midnight.</div>
+  ${spacer()}
+  ${btn('Return to tonight',"goTo('tonight')",'btn-primary')}
+</div>
+`);
+
+// 17. Reading partner note
+SCREENS['read-note'] = h(`
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+  <div class="label-accent">Night 09 · Their note</div>
+  <div style="font-size:9px;color:var(--inkS)">Sealed 2h ago</div>
+</div>
+<div class="editor" style="min-height:300px">
+  <div style="font-family:var(--fontSerif);font-size:16px;color:var(--inkPaper);line-height:1.8;font-style:italic">
+    <p style="margin-bottom:16px">I don't know how to say this without sounding like I'm complaining, but I feel like I'm holding everything together and nobody notices.</p>
+    <p style="margin-bottom:16px">Today I smiled through a meeting, helped a friend, answered my parents, and inside I was screaming. Not because anything terrible happened. Just because I'm tired of performing.</p>
+    <p>I don't expect you to fix this. I just needed someone to know.</p>
+  </div>
+</div>
+<div class="mt-lg">
+  ${btn('I witnessed this',"showToast('Your partner will know you were here','success');setTimeout(()=>goTo('tonight'),600)",'btn-secondary')}
+</div>
+`);
+
+// 18. Partner overview
+SCREENS['partner-overview'] = h(`
+${back('tonight')}
+<h2 class="mb-md">Partner</h2>
+<div class="card card-soft mb-md">
+  <div class="label-accent mb-sm">Status</div>
+  <div class="editorial" style="font-size:18px;line-height:1.4">Your partner wrote last night.</div>
+  <div class="sub mt-sm">You have exchanged 8 notes together.</div>
+</div>
+<div class="info-panel mb-md">
+  <div style="margin-bottom:6px"><strong style="color:var(--ink)">Notes exchanged:</strong> 8 of 21</div>
+  <div style="margin-bottom:6px"><strong style="color:var(--ink)">Last note from them:</strong> Night 08</div>
+  <div><strong style="color:var(--ink)">Next reveal milestone:</strong> Night 14</div>
+</div>
+<div class="gap-sm">
+  ${btn('Continue writing',"goTo('write')",'btn-primary')}
+  <div class="card" style="cursor:pointer;border-color:var(--lineS)" onclick="goTo('quiet-partner')">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:13px;color:var(--inkM)">Partner quiet for a while?</span>
+      <span style="color:var(--inkS)}">→</span>
+    </div>
+  </div>
+</div>
+`);
+
+// 19. Quiet partner
+SCREENS['quiet-partner'] = h(`
+${back('partner-overview')}
+<div class="center" style="flex:1">
+  <h2>Your partner has been<br>quiet for a <em>while</em>.</h2>
+  <p class="sub" style="max-width:280px">You can keep writing, wait a little longer, or quietly look for someone new.</p>
+  ${spacer()}
+  <div class="gap-sm" style="width:100%">
+    ${btn('Continue writing',"goTo('write')",'btn-primary')}
+    ${btn('Wait for them',"showToast('We will let you know when they return','success')",'btn-secondary')}
+    <div class="card" style="cursor:pointer;border-color:var(--lineS);text-align:center" onclick="goTo('gentle-reminder')">
+      <span style="font-size:13px;color:var(--inkM)">Send a gentle reminder</span>
+    </div>
+    <div class="card" style="cursor:pointer;border-color:var(--lineS);text-align:center" onclick="goTo('rematch-confirm')">
+      <span style="font-size:13px;color:var(--inkM)">Find a new partner</span>
+    </div>
+  </div>
+</div>
+`);
+
+// 20. Gentle reminder
+SCREENS['gentle-reminder'] = h(`
+${back('quiet-partner')}
+<div class="center" style="flex:1">
+  <h2>Send a gentle reminder?</h2>
+  <div class="info-panel" style="font-size:13px">A pre-written note will be sent: "Your writing partner left a gentle reminder. There is no pressure to reply tonight."</div>
+  <p class="sub mt-sm" style="font-size:12px">You can send one reminder every 3 days.</p>
+  ${spacer()}
+  <div class="gap-sm" style="width:100%">
+    ${btn('Send reminder',"showToast('Reminder sent','success');setTimeout(()=>goTo('partner-overview'),400)",'btn-primary')}
+    ${btn('Cancel',"goTo('quiet-partner')",'btn-ghost')}
+  </div>
+</div>
+`);
+
+// 21. Rematch confirmation
+SCREENS['rematch-confirm'] = h(`
+${back('quiet-partner')}
+<div class="center" style="flex:1">
+  <h2>Find a new partner?</h2>
+  <div class="info-panel" style="font-size:13px;text-align:left">
+    <div style="margin-bottom:8px">• Existing notes remain private</div>
+    <div style="margin-bottom:8px">• The current pairing will end</div>
+    <div style="margin-bottom:8px">• You may not be matched immediately</div>
+    <div>• The other person will not know who ended the pairing</div>
+  </div>
+  ${spacer()}
+  <div class="gap-sm" style="width:100%">
+    ${btn('Find a new partner',"showToast('Looking for a new partner...','success');setTimeout(()=>goTo('matching'),600)",'btn-primary')}
+    ${btn('Stay with this partner',"goTo('partner-overview')",'btn-ghost')}
+  </div>
+</div>
+`);
+
+// 22. Reveal progress
+SCREENS['reveal-progress'] = h(`
+${back('tonight')}
+<h2 class="mb-md">Your journey</h2>
+<div class="card card-soft mb-md">
+  ${constellation(6,9,21)}
+  <div style="display:flex;justify-content:space-between;margin-top:12px;font-size:11px;color:var(--inkS)">
+    <span>Night 9</span>
+    <span style="color:var(--rose)">8 nights until the choice</span>
+  </div>
+</div>
+<div class="info-panel">
+  <div style="margin-bottom:6px"><strong style="color:var(--ink)">Notes completed:</strong> 6 of 21</div>
+  <div style="margin-bottom:6px"><strong style="color:var(--ink)">Partner:</strong> 8 notes</div>
+  <div>On Night 21, you both choose. Your identity is only shared if you both say yes.</div>
+</div>
+<div class="mt-md">
+  ${btn('Continue writing tonight',"goTo('write')",'btn-primary')}
+</div>
+`);
+
+// 23. Day 21 arrival
+SCREENS['day21'] = h(`
+<div class="center" style="flex:1">
+  <div style="margin-bottom:12px">
+    <div style="width:64px;height:64px;border-radius:var(--rSm);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;margin:0 auto;font-size:20px;color:var(--gold)}">◈</div>
+  </div>
+  <h2>Twenty-one nights<br>brought you <em>here</em>.</h2>
+  <p class="sub" style="max-width:280px">You may choose to stay anonymous forever. Your identity will only be shared if both of you choose reveal.</p>
+  ${spacer()}
+  <div class="gap-sm" style="width:100%">
+    ${btn('Consider reveal',"goTo('reveal-choice')",'btn-primary')}
+    ${btn('Stay anonymous',"goTo('remain-anon')",'btn-ghost')}
+  </div>
+</div>
+`);
+
+// 24. Reveal choice
+SCREENS['reveal-choice'] = h(`
+${back('day21')}
+<div class="label-accent mb-md">The choice</div>
+<h2 class="mb-md">What would you like to do?</h2>
+<div class="gap-sm">
+  <div class="choice-row" onclick="selectChoice(this,'revealConfirm')">
+    <div class="c-icon">◈</div>
+    <div class="c-text">
+      <div class="c-title">Reveal my identity</div>
+      <div class="c-sub">Only if they also choose reveal. Otherwise, you stay anonymous.</div>
+    </div>
+  </div>
+  <div class="choice-row" onclick="selectChoice(this,'revealConfirm')">
+    <div class="c-icon">○</div>
+    <div class="c-text">
+      <div class="c-title">Stay anonymous permanently</div>
+      <div class="c-sub">Your story remains yours alone. No identity is shared.</div>
+    </div>
+  </div>
+</div>
+<button class="btn btn-primary mt-lg" id="revealConfirm" disabled onclick="goTo('reveal-waiting')">Confirm choice</button>
+`);
+
+// 25. Reveal waiting
+SCREENS['reveal-waiting'] = h(`
+<div class="center" style="flex:1">
+  <div style="width:48px;height:48px;border-radius:var(--rSm);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:20px;color:var(--rose)}">◈</div>
+  <h2>Your choice is sealed.</h2>
+  <p class="sub" style="max-width:280px">If your partner makes the same choice, you will both be notified. Otherwise, you will remain anonymous.</p>
+  ${spacer()}
+  ${btn('Return to tonight',"goTo('tonight')",'btn-primary')}
+</div>
+`);
+
+// 26. Mutual reveal success
+SCREENS['mutual-reveal'] = h(`
+<div class="center" style="flex:1">
+  <h2>You both chose to be<br><em>known</em>.</h2>
+  <div class="card card-soft mt-md" style="width:100%;border-color:rgba(211,160,177,0.12)">
+    <div style="display:flex;gap:16px;justify-content:center;margin-bottom:12px">
+      <div style="text-align:center"><div style="width:40px;height:40px;border-radius:50%;background:var(--rose);display:flex;align-items:center;justify-content:center;font-size:16px;margin:0 auto 4px">A</div><div style="font-size:12px;color:var(--ink)">Ananya</div></div>
+      <div style="text-align:center"><div style="width:40px;height:40px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:16px;margin:0 auto 4px">R</div><div style="font-size:12px;color:var(--ink)">Ravi</div></div>
+    </div>
+    <div class="sub" style="font-size:12px;text-align:center">You exchanged 21 nights of honest writing.</div>
+    <div style="text-align:center;margin-top:8px;font-size:11px;color:var(--inkS)">City: shared · only with consent</div>
+  </div>
+  ${spacer()}
+  <div class="gap-sm" style="width:100%">
+    ${btn('Say hello',"showToast('Message sent','success')",'btn-primary')}
+    ${btn('Not now',"goTo('tonight')",'btn-ghost')}
+  </div>
+</div>
+`);
+
+// 27. Remain anonymous
+SCREENS['remain-anon'] = h(`
+<div class="center" style="flex:1">
+  <h2>Your story stays<br><em>anonymous</em>.</h2>
+  <p class="sub" style="max-width:280px">What you shared still mattered. Neither person's identity will be revealed.</p>
+  <div class="info-panel mt-md" style="font-size:13px;text-align:center">
+    You may close this ritual, save your own reflections, or begin another journey later.
+  </div>
+  ${spacer()}
+  ${btn('Close this chapter',"goTo('tonight')",'btn-primary')}
+</div>
+`);
+
+// 28. Arena home
+SCREENS.arena = h(`
+<h2 class="mb-md">Arena</h2>
+<p class="sub mb-md">Anonymous spaces based on what you are carrying.</p>
+<div class="gap-sm">
+  ${[
+    {name:'Loneliness',sub:'For when the room feels empty',count:24},
+    {name:'College pressure',sub:'Exams, placements, expectations',count:18},
+    {name:'Family',sub:'The people who raised you',count:15},
+    {name:'Work stress',sub:'Deadlines, identity, burnout',count:12},
+    {name:'Relationships',sub:'Love, friendship, distance',count:21},
+    {name:'Grief',sub:'Loss does not have a timeline',count:9},
+    {name:'Feeling lost',sub:'Not sure where you are going',count:30},
+    {name:'Silent Room',sub:'One line. No replies. Witnessed.',count:47},
+  ].map(a=>`
+    <div class="arena-item" onclick="goTo('silent-room')">
+      <div class="a-name">${a.name}</div>
+      <div class="a-sub">${a.sub}</div>
+      <div class="a-count">${a.count} people here</div>
+    </div>
+  `).join('')}
+</div>
+<div class="tab-bar" id="arenaTabs"></div>
+`);
+
+// 29. Silent Room
+SCREENS['silent-room'] = h(`
+${back('arena')}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+  <h2>Silent Room</h2>
+  <div style="font-size:12px;color:var(--inkS)">47 present</div>
+</div>
+<p class="sub mb-md" style="font-size:12px">No replies. Just witnessed. Each line disappears after seven days.</p>
+<div class="card" style="border-color:var(--lineS);cursor:pointer;text-align:center;padding:12px" onclick="goTo('silent-submit')">
+  <span style="font-size:13px;color:var(--rose)">Leave a line here →</span>
+</div>
+<div class="mt-md gap-sm" id="silentFeed">
+  ${[
+    'I keep waiting for something to feel different and I am not sure it ever will.',
+    'Today I laughed at something genuine and forgot I was sad for a whole minute.',
+    'My parents think I am fine because I learned to smile convincingly.',
+    'I wish someone would ask how I am and actually want the answer.',
+    'The version of me that exists in other people\'s heads is not who I am.',
+  ].map(t=>`
+    <div class="sentry"><div class="s-line">"${t}"</div><div class="s-meta"><span>~${Math.floor(Math.random()*3+1)}h ago</span><span>Expires in ${Math.floor(Math.random()*5+2)}d</span></div></div>
+  `).join('')}
+</div>
+`);
+
+// 30. Submit to Silent Room
+SCREENS['silent-submit'] = h(`
+${back('silent-room')}
+<h2 class="mb-md">Leave a line here</h2>
+<p class="sub mb-md" style="font-size:12px">One anonymous line. It disappears after seven days. Nobody can reply.</p>
+<div class="editor">
+  <textarea placeholder="Write one line. Just one." style="min-height:100px" id="silentLine"></textarea>
+</div>
+<div class="mt-md label" style="font-size:10px">No usernames, no replies, no scoring.</div>
+${spacer()}
+${btn('Leave this here',"showToast('Your line is in the room. It will disappear in seven days.','success');setTimeout(()=>goTo('silent-room'),500)",'btn-primary')}
+`);
+
+// 31. Topic arena (placeholder - uses Silent Room structure)
+SCREENS['topic-arena'] = h(`
+${back('arena')}
+<div class="center" style="flex:1">
+  <h2>Topic Arena</h2>
+  <p class="sub">Share how you feel, receive one quiet acknowledgement.</p>
+  <div class="info-panel mt-md" style="font-size:13px;text-align:center">
+    Select a feeling, write a short reflection, and others may send one preset acknowledgement like "I felt this too" or "You were heard."
+  </div>
+  ${spacer()}
+  ${btn('Coming soon',"showToast('This space is being prepared','success')",'btn-primary')}
+</div>
+`);
+
+// 32. Notifications
+SCREENS.notifs = h(`
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+  <h2>Notifications</h2>
+  <span style="font-size:12px;color:var(--rose);cursor:pointer" onclick="markRead()">Mark all read</span>
+</div>
+<div class="gap-sm">
+  <div class="notif-row unread"><div class="n-icon">✉</div><div class="n-body"><div class="n-title">Partner note received</div><div class="n-text">Your partner wrote tonight. Their note is ready.</div><div class="n-time">8 min ago</div></div></div>
+  <div class="notif-row unread"><div class="n-icon">♫</div><div class="n-body"><div class="n-title">Night reminder</div><div class="n-text">Tonight's prompt is waiting for you.</div><div class="n-time">1h ago</div></div></div>
+  <div class="notif-row"><div class="n-icon">◈</div><div class="n-body"><div class="n-title">Reveal update</div><div class="n-text">You are 12 nights away from the choice.</div><div class="n-time">2d ago</div></div></div>
+  <div class="notif-row"><div class="n-icon">⊙</div><div class="n-body"><div class="n-title">Someone heard you</div><div class="n-text">Your line in Silent Room was witnessed by 3 people.</div><div class="n-time">3d ago</div></div></div>
+</div>
+<div class="tab-bar" id="notifTabs"></div>
+`);
+
+// 33. Me (Profile)
+SCREENS.me = h(`
+<div class="center mb-md">
+  <div style="width:64px;height:64px;border-radius:50%;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:22px;color:var(--rose)">A</div>
+  <h3>Ananya</h3>
+  <p class="sub">The Quiet Storm · Night 09 of 21</p>
+</div>
+<div class="card" style="padding:4px 0">
+  <div class="setting-row" onclick="goTo('writing-history')"><div class="sl"><span class="s-icon">◑</span><span>Writing history</span></div><span style="color:var(--inkS)">→</span></div>
+  <div class="setting-row" onclick="goTo('notif-settings')"><div class="sl"><span class="s-icon">♫</span><span>Notification settings</span></div><span style="color:var(--inkS)">→</span></div>
+  <div class="setting-row" onclick="goTo('privacy')"><div class="sl"><span class="s-icon">⊙</span><span>Privacy & anonymity</span></div><span style="color:var(--inkS)">→</span></div>
+  <div class="setting-row" onclick="goTo('safety-centre')"><div class="sl"><span class="s-icon">◈</span><span>Safety centre</span></div><span style="color:var(--inkS)">→</span></div>
+  <div class="setting-row" onclick="goTo('account-delete')"><div class="sl"><span class="s-icon" style="color:var(--warn)">—</span><span style="color:var(--warn)">Delete account</span></div></div>
+</div>
+<div class="tab-bar" id="meTabs"></div>
+`);
+
+// 34. Writing history
+SCREENS['writing-history'] = h(`
+${back('me')}
+<h2 class="mb-md">Writing history</h2>
+<div class="gap-sm">
+  ${[18,17,16,14,12,10].map(n=>`
+    <div class="card" style="cursor:pointer" onclick="showToast('Opening your note from Night ${n}','success')">
+      <div style="display:flex;justify-content:space-between"><span class="label">Night ${n}</span><span style="font-size:11px;color:var(--inkS)">Sealed</span></div>
+      <div class="sub" style="font-size:12px;margin-top:4px">"What are you carrying that nobody asked about?"</div>
+    </div>
+  `).join('')}
+</div>
+`);
+
+// 35. Notification settings
+SCREENS['notif-settings'] = h(`
+${back('me')}
+<h2 class="mb-md">Notification settings</h2>
+<div class="card" style="padding:4px 0">
+  <div class="setting-row"><div class="sl"><span class="s-icon">♫</span><span>Nightly writing reminder</span></div><div class="toggle on" id="tg1" onclick="this.classList.toggle('on')"><div class="thumb"></div></div></div>
+  <div class="setting-row"><div class="sl"><span class="s-icon">✉</span><span>Partner note received</span></div><div class="toggle on" id="tg2" onclick="this.classList.toggle('on')"><div class="thumb"></div></div></div>
+  <div class="setting-row"><div class="sl"><span class="s-icon">⊙</span><span>Partner inactivity</span></div><div class="toggle on" id="tg3" onclick="this.classList.toggle('on')"><div class="thumb"></div></div></div>
+  <div class="setting-row"><div class="sl"><span class="s-icon">◈</span><span>Reveal updates</span></div><div class="toggle" id="tg4" onclick="this.classList.toggle('on')"><div class="thumb"></div></div></div>
+  <div class="setting-row"><div class="sl"><span class="s-icon">◈</span><span>Safety updates</span></div><div class="toggle on" id="tg5" onclick="this.classList.toggle('on')"><div class="thumb"></div></div></div>
+</div>
+`);
+
+// 36. Privacy
+SCREENS.privacy = h(`
+${back('me')}
+<h2 class="mb-md">Privacy & anonymity</h2>
+<div class="info-panel" style="font-size:13px;line-height:1.8">
+  <div style="margin-bottom:10px"><strong style="color:var(--ink)">What is stored:</strong> Your email, your writing, your archetype, match history.</div>
+  <div style="margin-bottom:10px"><strong style="color:var(--ink)">What your partner sees:</strong> Your notes. Nothing else.</div>
+  <div style="margin-bottom:10px"><strong style="color:var(--ink)">When identity is shared:</strong> Only on Night 21, only with your explicit consent, only if both agree.</div>
+  <div style="margin-bottom:10px"><strong style="color:var(--ink)">Writing is private:</strong> Your entries are not accessible to your partner after the ritual ends unless you choose reveal.</div>
+  <div><strong style="color:var(--ink)">Deletion:</strong> You can delete your account at any time. Partner notes are anonymised.</div>
+</div>
+`);
+
+// 37. Safety centre
+SCREENS['safety-centre'] = h(`
+${back('me')}
+<h2 class="mb-md">Safety centre</h2>
+<div class="gap-sm">
+  ${btn('Block partner',"showToast('This will end the pairing','success');setTimeout(()=>goTo('block-partner'),300)",'btn-secondary')}
+  ${btn('Report a concern',"goTo('report')",'btn-secondary')}
+  <div class="info-panel danger mt-sm" style="font-size:13px;border-color:rgba(200,121,130,0.2)">
+    If you need immediate support, please reach out to a crisis helpline in your country.
+  </div>
+  <div class="card" style="cursor:pointer" onclick="showToast('Helpline information displayed','success')">
+    <span style="font-size:13px;color:var(--inkM)">Show crisis resources</span>
+  </div>
+</div>
+`);
+
+// 38. Block partner
+SCREENS['block-partner'] = h(`
+${back('safety-centre')}
+<div class="center" style="flex:1">
+  <h2>Block your partner?</h2>
+  <div class="info-panel danger" style="text-align:left;font-size:13px;border-color:rgba(200,121,130,0.2)">
+    <div style="margin-bottom:8px">• They will not be notified who blocked them</div>
+    <div style="margin-bottom:8px">• The pairing will end immediately</div>
+    <div style="margin-bottom:8px">• Future contact will be prevented</div>
+    <div>• Existing notes remain handled according to our privacy policy</div>
+  </div>
+  ${spacer()}
+  <div class="gap-sm" style="width:100%">
+    ${btn('Block partner',"showToast('Partner blocked','success');setTimeout(()=>goTo('me'),400)",'btn-destructive')}
+    ${btn('Cancel',"goTo('safety-centre')",'btn-ghost')}
+  </div>
+</div>
+`);
+
+// 39. Report flow
+SCREENS.report = h(`
+${back('safety-centre')}
+<h2 class="mb-md">Report a concern</h2>
+<div class="gap-sm">
+  ${['Harassment','Sexual content','Threats','Self-harm concern','Hate or abuse','Personal information shared','Spam','Something else'].map(t=>
+    `<div class="choice-row" onclick="selectChoice(this,'reportNext')"><div class="c-text"><div class="c-title">${t}</div></div></div>`
+  ).join('')}
+</div>
+<button class="btn btn-primary mt-lg" id="reportNext" disabled onclick="goTo('report-done')">Continue</button>
+`);
+
+SCREENS['report-done'] = h(`
+<div class="center" style="flex:1">
+  <h2>Report submitted</h2>
+  <p class="sub">Our team reviews reports within 24 hours. You will not be contacted unless we need more information.</p>
+  ${spacer()}
+  ${btn('Return to safety centre',"goTo('safety-centre')",'btn-primary')}
+</div>
+`);
+
+// 40. Account deletion
+SCREENS['account-delete'] = h(`
+${back('me')}
+<div class="center" style="flex:1">
+  <h2>Delete your account?</h2>
+  <div class="info-panel danger" style="text-align:left;font-size:13px;border-color:rgba(200,121,130,0.2)">
+    <div style="margin-bottom:8px">• Your writing will be anonymised</div>
+    <div style="margin-bottom:8px">• Your partner's notes are not affected</div>
+    <div style="margin-bottom:8px">• Some data may be retained for safety or legal purposes</div>
+    <div>• This action cannot be undone</div>
+  </div>
+  ${spacer()}
+  <div class="gap-sm" style="width:100%">
+    ${btn('Delete my account',"showToast('Account deletion requested','error');setTimeout(()=>goTo('welcome'),500)",'btn-destructive')}
+    ${btn('Keep my account',"goTo('me')",'btn-ghost')}
+  </div>
+</div>
+`);
+
+// ─── Auth screens ───
+SCREENS.login = h(`
+${back('welcome')}
+<div class="text-center mb-md"><h2>Welcome back</h2><p class="sub">Your notes are waiting.</p></div>
+<div class="form-group"><div class="form-label">Email</div><input class="form-input" type="email" placeholder="you@email.com" id="loginEmail"></div>
+<div class="form-group"><div class="form-label">Password</div><input class="form-input" type="password" placeholder="Your password" id="loginPass"></div>
+${btn('Sign in',"const e=document.getElementById('loginEmail').value,p=document.getElementById('loginPass').value;if(!e||!p){showToast('Email and password required','error')}else if(p.length<8){showToast('Invalid password','error')}else{showToast('Signed in','success');setTimeout(()=>goTo('tonight'),400)}",'btn-primary')}
+${btn('Forgot password?',"showToast('Reset link sent to your email','success')",'btn-ghost')}
+`);
+
+SCREENS.register = h(`
+${back('welcome')}
+<div class="text-center mb-md"><h2>Create account</h2><p class="sub">Begin your first night.</p></div>
+<div class="form-group"><div class="form-label">Name</div><input class="form-input" placeholder="Your name" id="regName"></div>
+<div class="form-group"><div class="form-label">Email</div><input class="form-input" type="email" placeholder="you@email.com" id="regEmail"></div>
+<div class="form-group"><div class="form-label">Password</div><input class="form-input" type="password" placeholder="At least 8 characters" id="regPass"></div>
+${btn('Create account',"const n=document.getElementById('regName').value,e=document.getElementById('regEmail').value,p=document.getElementById('regPass').value;if(!n||!e||!p){showToast('All fields are required','error')}else if(p.length<8){showToast('Password must be at least 8 characters','error')}else{showToast('Account created','success');setTimeout(()=>goTo('promise'),400)}",'btn-primary')}
+${btn('Already registered? Sign in',"goTo('login')",'btn-ghost')}
+`);
+
+// ═══════════════════════════════════════════════
+// APPLICATION
+// ═══════════════════════════════════════════════
+
+function renderScreen(id) {
+  const container = document.getElementById('screenContainer');
+  if (!SCREENS[id]) return;
+  container.innerHTML = `<div class="screen active" id="activeScreen">${SCREENS[id]}</div>`;
+  const s = document.getElementById('activeScreen');
+  s.style.animation = 'none';
+  void s.offsetHeight;
+  const foldIn = ['write','note-sealed','read-note','seal-confirm'].includes(id);
+  s.style.animation = foldIn ? 'pageFold .4s cubic-bezier(0.4,0,0.2,1)' : 'fadeUp .35s ease';
+  const c = s.querySelector('.screen-content');
+  if (c) c.scrollTop = 0;
+}
+
+let currentScreen = 'splash';
+
+function goTo(id) {
+  if (!SCREENS[id]) { showToast('Screen coming soon','success'); return; }
+  currentScreen = id;
+  renderScreen(id);
+  if (['tonight','arena','notifs','me'].includes(id)) renderTabs(id);
+}
+
+function renderTabs(current) {
+  const tabs = [
+    {id:'tonight',icon:'☽',label:'Tonight'},
+    {id:'arena',icon:'◈',label:'Arena'},
+    {id:'notifs',icon:'♫',label:'Alerts'},
+    {id:'me',icon:'⊙',label:'Me'},
+  ];
+  document.querySelectorAll('.tab-bar').forEach(bar => {
+    bar.innerHTML = tabs.map(t =>
+      `<button class="tab-item ${current===t.id?'active':''}" onclick="goTo('${t.id}')">
+        <span class="tab-icon">${t.icon}</span>
+        <span class="tab-label">${t.label}</span>
+      </button>`
+    ).join('');
+  });
+}
+
+function selectChoice(el, nextBtnId) {
+  el.parentElement.querySelectorAll('.choice-row').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  const btn = document.getElementById(nextBtnId);
+  if (btn) btn.disabled = false;
+}
+
+function markRead() {
+  document.querySelectorAll('.notif-row.unread').forEach(n => n.classList.remove('unread'));
+  showToast('All marked as read','success');
+}
+
+// ─── Toast ───
+let tt;
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast ' + type; t.style.display = 'flex';
+  clearTimeout(tt); tt = setTimeout(() => { t.style.display = 'none'; }, 2500);
+}
+
+// ─── Mode ───
+function setMode(m) {
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.mode-btn[onclick*="${m}"]`).classList.add('active');
+  document.getElementById('overviewGrid').classList.toggle('active', m === 'overview');
+  document.getElementById('phoneWrap').classList.toggle('active', m === 'interactive');
+}
+
+// ─── Matching auto-transition ───
+let matchInterval, orbitAnim;
+SCREENS.matching = SCREENS.matching.replace('</div>','') + '</div>';
+const origMatchingRender = renderScreen;
+renderScreen = function(id) {
+  origMatchingRender(id);
+  if (id === 'matching') {
+    clearInterval(matchInterval); cancelAnimationFrame(orbitAnim);
+    const msgs = ['Keeping both of you anonymous.','Preparing your first night.','Finding someone who writes like you.','Almost there.'];
+    let i = 0, orbitT = 0;
+    matchInterval = setInterval(() => {
+      const el = document.getElementById('matchStatus');
+      if (el) el.textContent = msgs[i++ % msgs.length];
+    }, 1800);
+
+    function orbitStep() {
+      orbitT += 0.025;
+      const d1 = document.getElementById('orbitDot1');
+      const d2 = document.getElementById('orbitDot2');
+      const trail = document.getElementById('orbitTrail');
+      if (d1 && d2 && trail) {
+        const r = 60;
+        const cx = 60, cy = 40, mx = 60, my = 40;
+        const angle = orbitT * 1.2;
+        const x1 = cx + Math.cos(angle) * r;
+        const y1 = cy + Math.sin(angle) * r * 0.3;
+        d1.style.left = (x1 - 4) + 'px';
+        d1.style.top = (y1 - 4) + 'px';
+        d2.style.right = (120 - (cx - Math.cos(angle + Math.PI) * r)) + 'px';
+        d2.style.top = (cy - Math.sin(angle + Math.PI) * r * 0.3) + 'px';
+        trail.style.left = (cx - 2 + Math.cos(angle + Math.PI / 6) * r * 0.4) + 'px';
+        trail.style.top = (cy - 2 + Math.sin(angle + Math.PI / 6) * r * 0.3 * 0.4) + 'px';
+        trail.style.opacity = 1;
+      }
+      orbitAnim = requestAnimationFrame(orbitStep);
+    }
+    orbitAnim = requestAnimationFrame(orbitStep);
+    setTimeout(() => { clearInterval(matchInterval); cancelAnimationFrame(orbitAnim); goTo('match-found'); }, 6000);
+  }
+};
+
+// ─── Initial render ───
+goTo('splash');
+
+// ─── Splash → Welcome ───
+setTimeout(() => { goTo('welcome'); }, 1800);
+
+// ─── Gallery Builder ───
+function buildGallery() {
+  const g = document.getElementById('overviewGrid');
+  const items = [
+    ['splash','Splash'],['welcome','Welcome'],['promise','How it works'],['intention','Intention'],
+    ['safety','Safety'],['archetype-result','Archetype'],['matching','Matching'],['match-found','Match found'],
+    ['tonight','Tonight'],['write','Writing'],['note-sealed','Note sealed'],['read-note','Reading note'],
+    ['partner-overview','Partner'],['reveal-progress','Constellation'],['day21','Day 21'],['mutual-reveal','Reveal'],
+    ['arena','Arena'],['silent-room','Silent Room'],['notifs','Notifications'],['me','Profile'],
+  ];
+  g.innerHTML = items.map(([id,label]) => {
+    const html = SCREENS[id] || '';
+    const clean = html.replace(/onclick="[^"]*"/g,'').replace(/id="[^"]*"/g,'');
+    return `<div class="mini-phone" onclick="setMode('interactive');goTo('${id}')">
+      <div class="m-notch"></div><div class="m-bar"><span>9:41</span><span>●●●●</span></div><div class="m-home"></div>
+      <div class="m-content">${clean.slice(0,500)}</div>
+      <div class="m-label">${label}</div>
+    </div>`;
+  }).join('');
+}
+// ═══════════════════════════════════════════════
+// STAR FIELD
+// ═══════════════════════════════════════════════
+(function initStars() {
+  const c = document.getElementById('starCanvas');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  let w, h, stars = [], mouseX = 0, mouseY = 0;
+
+  function resize() {
+    w = c.width = window.innerWidth;
+    h = c.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  const count = Math.min(160, Math.floor((w * h) / 8000));
+  for (let i = 0; i < count; i++) {
+    stars.push({
+      x: Math.random() * w, y: Math.random() * h,
+      r: 0.3 + Math.random() * 1.2,
+      a: 0.15 + Math.random() * 0.6,
+      speed: 0.002 + Math.random() * 0.008,
+      phase: Math.random() * Math.PI * 2,
+    });
+  }
+
+  document.addEventListener('mousemove', e => {
+    mouseX = (e.clientX / w - 0.5) * 2;
+    mouseY = (e.clientY / h - 0.5) * 2;
+  });
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+    const t = Date.now() / 1000;
+    for (const s of stars) {
+      const breath = 0.5 + 0.5 * Math.sin(t * s.speed * 3 + s.phase);
+      const px = s.x + mouseX * 2 * (s.y / h);
+      const py = s.y + mouseY * 2 * (s.x / w);
+      const alpha = s.a * (0.3 + 0.7 * breath);
+      ctx.beginPath();
+      ctx.arc(px, py, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(208,178,120,${alpha})`;
+      ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ═══════════════════════════════════════════════
+// 3D PHONE TILT
+// ═══════════════════════════════════════════════
+(function initTilt() {
+  const tilt = document.querySelector('.phone-tilt');
+  if (!tilt) return;
+  let targetX = 0, targetY = 0, curX = 0, curY = 0;
+  let ticking = false;
+
+  document.addEventListener('mousemove', e => {
+    const rect = tilt.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    targetX = ((e.clientY - cy) / rect.height) * -6;
+    targetY = ((e.clientX - cx) / rect.width) * 6;
+    if (!ticking) {
+      requestAnimationFrame(() => {
+        curX += (targetX - curX) * 0.12;
+        curY += (targetY - curY) * 0.12;
+        tilt.style.transform = `rotateX(${curX}deg) rotateY(${curY}deg)`;
+        ticking = false;
+      });
+      ticking = true;
+    }
+  });
+
+  document.addEventListener('mouseleave', () => {
+    targetX = 0; targetY = 0;
+    function reset() {
+      curX += (0 - curX) * 0.08;
+      curY += (0 - curY) * 0.08;
+      tilt.style.transform = `rotateX(${curX}deg) rotateY(${curY}deg)`;
+      if (Math.abs(curX) > 0.01 || Math.abs(curY) > 0.01) requestAnimationFrame(reset);
+    }
+    reset();
+  });
+})();
+
+// ═══════════════════════════════════════════════
+// BUTTON RIPPLE (event delegation)
+// ═══════════════════════════════════════════════
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.btn');
+  if (!btn) return;
+  const rect = btn.getBoundingClientRect();
+  const r = document.createElement('span');
+  r.className = 'btn-ripple';
+  r.style.width = r.style.height = '100px';
+  r.style.left = (e.clientX - rect.left - 50) + 'px';
+  r.style.top = (e.clientY - rect.top - 50) + 'px';
+  btn.appendChild(r);
+  r.addEventListener('animationend', () => r.remove());
+});
+
+buildGallery();
+</script>
+</body>
+</html>

@@ -1,25 +1,22 @@
 const express = require('express');
 const stmts = require('../../db');
-const { attemptMatch, getMatchDay, getPartnerId } = require('../utils/matching');
-const { getAdaptivePrompt } = require('../utils/themes');
-const { getMoodInsights } = require('../utils/mood');
-const { prompts, EMOTIONAL_THEMES } = require('../config/constants');
+const { attemptMatch, getPartnerId } = require('../utils/matching');
 const { notifyMatchFound } = require('../services/notifications');
+const validate = require('../middleware/validate');
 
 const router = express.Router();
 
-router.post('/scan', (req, res) => {
+router.post('/scan', validate.scan, (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Unauthorized' });
   try {
     const { scores, archetype } = req.body;
-    if (!archetype || !scores) return res.status(400).json({ error: 'Scan data required' });
     const validTypes = ['protector', 'connector', 'performer', 'disconnector'];
     if (!validTypes.includes(archetype)) return res.status(400).json({ error: 'Invalid archetype' });
     const userId = req.session.userId;
     const existingMatch = stmts.getMatch.get(userId, userId);
     if (existingMatch) return res.status(400).json({ error: 'Cannot retake scan after matching' });
     const user = stmts.getUserById.get(userId);
-    stmts.updateUser.run(user.name, user.email, user.college, user.year, user.gender, user.match_pref_gender, user.match_pref_year, user.consent_given, archetype, userId);
+    stmts.updateUser.run(user.name, user.email, user.college, user.year, user.gender, user.match_pref_gender, user.match_pref_year, user.consent_given, archetype, JSON.stringify(scores), userId);
     const matched = attemptMatch(userId);
     if (matched) {
       const match = stmts.getMatch.get(userId, userId);

@@ -1,7 +1,9 @@
 const express = require('express');
 const path = require('path');
+const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
+const cors = require('cors');
 const session = require('express-session');
 const crypto = require('crypto');
 const fs = require('fs');
@@ -15,25 +17,96 @@ const paymentsRoutes = require('./routes/payments');
 const pushRoutes = require('./routes/push');
 const analyzeRoutes = require('./routes/analyze');
 const notificationRoutes = require('./routes/notifications');
+const healthRoutes = require('./routes/health');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 
-app.use(helmet({ contentSecurityPolicy: false }));
+const PROD = process.env.NODE_ENV === 'production';
 
-const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });
-if (process.env.NODE_ENV !== 'test') {
-  app.use('/api/', limiter);
+// Trust proxy when behind a reverse proxy (Heroku, Railway, etc.)
+if (process.env.TRUST_PROXY) {
+  app.set('trust proxy', parseInt(process.env.TRUST_PROXY) || 1);
 }
 
-app.use(express.static(path.join(__dirname, '..', 'public')));
-app.use(express.json());
+// ─── Compression ──────────────────────────
+app.use(compression({ level: 6, threshold: 256 }));
 
+// ─── CORS ─────────────────────────────────────
+const ALLOWED_ORIGINS = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',')
+  : ['http://localhost:3005'];
+app.use(cors({
+  origin: PROD ? ALLOWED_ORIGINS : true,
+  credentials: true
+}));
+
+app.use(helmet({
+  contentSecurityPolicy: PROD ? {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://checkout.razorpay.com', 'https://js.stripe.com'],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'", 'https://api.razorpay.com', 'https://api.stripe.com'],
+      frameSrc: ["'self'", 'https://checkout.razorpay.com', 'https://js.stripe.com'],
+    },
+  } : false,
+}));
+
+// Tiered rate limiting
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many attempts, try again later' } });
+const genLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false });
+const strictLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false, message: { error: 'Rate limit exceeded' } });
+if (process.env.NODE_ENV !== 'test') {
+  app.use('/api/login', authLimiter);
+  app.use('/api/register', authLimiter);
+  app.use('/api/forgot-password', authLimiter);
+  app.use('/api/reset-password', authLimiter);
+  app.use('/api/analyze', strictLimiter);
+  app.use('/api/', genLimiter);
+}
+
+app.use(express.static(path.join(__dirname, '..', 'public'), { maxAge: PROD ? '1y' : 0 }));
+app.use(express.json({ limit: '50kb' }));
+
+// ─── Session ──────────────────────────────────
+const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
 app.use(session({
-  secret: crypto.randomBytes(32).toString('hex'),
+  secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  cookie: { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000, sameSite: 'strict' }
+  cookie: {
+    httpOnly: true,
+    secure: PROD,
+    sameSite: PROD ? 'lax' : 'strict',
+    maxAge: 30 * 24 * 60 * 60 * 1000
+  }
 }));
+
+// ─── Env Validation ──────────────────────────
+const requiredVars = [];
+const optionalVars = [
+  { key: 'BASE_URL', desc: 'Public URL (used for reset-password links)' },
+  { key: 'CONTACT_EMAIL', desc: 'Contact email for VAPID/web-push' },
+  { key: 'OPENAI_API_KEY', desc: 'OpenAI key for LLM analysis' },
+  { key: 'ANTHROPIC_API_KEY', desc: 'Anthropic key for LLM analysis' },
+  { key: 'EMAIL_HOST', desc: 'SMTP host for transactional emails' },
+  { key: 'SESSION_SECRET', desc: 'Persistent session secret (auto-generated if missing)' },
+  { key: 'CORS_ORIGINS', desc: 'Comma-separated allowed origins for CORS' },
+  { key: 'TRUST_PROXY', desc: 'Number of proxy hops to trust' },
+  { key: 'ADMIN_EMAIL', desc: 'Email to seed as admin (requires ADMIN_PASSWORD)' },
+  { key: 'ADMIN_PASSWORD', desc: 'Password for admin user' },
+];
+if (process.env.NODE_ENV !== 'test') {
+  for (const v of requiredVars) {
+    if (!process.env[v.key]) console.warn(`  ⚠ Missing required env: ${v.key} — ${v.desc}`);
+  }
+  for (const v of optionalVars) {
+    if (!process.env[v.key]) console.log(`  ℹ Optional env not set: ${v.key} — ${v.desc}`);
+  }
+}
 
 // ─── Web Push Setup ─────────────────────
 const VAPID_PATH = path.join(__dirname, '..', '.vapid-keys.json');
@@ -85,17 +158,38 @@ app.use('/api/pay', paymentsRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api', analyzeRoutes);
 app.use('/api', notificationRoutes);
+app.use('/api', healthRoutes);
+app.use('/api/admin', adminRoutes);
 
 // ─── Frontend Routes ────────────────────
 const indexHtml = path.join(__dirname, '..', 'public', 'index.html');
+const appHtml = path.join(__dirname, '..', 'public', 'app.html');
 app.get('/', (req, res) => res.sendFile(indexHtml));
-app.get('/onboarding', (req, res) => res.sendFile(indexHtml));
-app.get('/app', (req, res) => res.sendFile(indexHtml));
-app.get('/app/*', (req, res) => res.sendFile(indexHtml));
-app.get('/quiz', (req, res) => res.sendFile(indexHtml));
-app.get('/archetype/:type', (req, res) => res.sendFile(indexHtml));
-app.get('/match-day', (req, res) => res.sendFile(indexHtml));
+app.get('/app', (req, res) => res.sendFile(appHtml));
+app.get('/app/*', (req, res) => res.sendFile(appHtml));
+app.get('/onboarding', (req, res) => res.sendFile(appHtml));
+app.get('/quiz', (req, res) => res.sendFile(appHtml));
+app.get('/archetype/:type', (req, res) => res.sendFile(appHtml));
+app.get('/match-day', (req, res) => res.sendFile(appHtml));
 app.get('/reset-password', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'reset-password.html')));
+app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'admin.html')));
+app.get('/checkout', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'razorpay-checkout.html')));
+
+// ─── 404 handler ───────────────────────────
+app.use((req, res) => {
+  if (req.path.startsWith('/api/')) {
+    res.status(404).json({ error: 'Not found' });
+  } else {
+    res.status(404).sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+  }
+});
+
+// ─── Error handling middleware ─────────────
+app.use((err, req, res, _next) => {
+  console.error('  ✗ Unhandled error:', err.message || err);
+  if (res.headersSent) return;
+  res.status(err.status || 500).json({ error: err.message || 'Internal server error' });
+});
 
 // ─── Daily Push Reminders ───────────────
 function sendDailyReminders() {

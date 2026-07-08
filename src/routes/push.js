@@ -1,6 +1,4 @@
 const express = require('express');
-const stmts = require('../../db');
-const webpush = require('web-push');
 
 const router = express.Router();
 

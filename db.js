@@ -1,5 +1,6 @@
 const Database = require('better-sqlite3');
 const path = require('path');
+const crypto = require('crypto');
 
 // Initialize database (use DB_PATH env var for testing)
 const dbPath = process.env.DB_PATH || path.join(__dirname, 'mentally-prepare.db');
@@ -27,6 +28,7 @@ const initDB = () => {
       consent_given INTEGER NOT NULL DEFAULT 1,
       push_subscription TEXT,
       notif_prefs TEXT DEFAULT '{"partner_entry":true,"partner_comment":true,"match_found":true,"reveal":true,"daily_prompt":true,"system":true}',
+      role TEXT NOT NULL DEFAULT 'user',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -123,11 +125,50 @@ const initDB = () => {
       email TEXT UNIQUE NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE INDEX IF NOT EXISTS idx_matches_user1 ON matches(user1_id);
+    CREATE INDEX IF NOT EXISTS idx_matches_user2 ON matches(user2_id);
+    CREATE INDEX IF NOT EXISTS idx_entries_user_id ON entries(user_id);
+    CREATE INDEX IF NOT EXISTS idx_entries_match_id ON entries(match_id);
+    CREATE INDEX IF NOT EXISTS idx_entries_user_match_day ON entries(user_id, match_id, day_number);
+    CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+    CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications(user_id, read);
+    CREATE INDEX IF NOT EXISTS idx_reports_user_id ON reports(user_id);
+    CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id);
   `);
   console.log('Database schema verified.');
 };
 
 initDB();
+
+// ─── Migrations ───────────────────────────
+const cols = db.pragma('table_info(users)').map(c => c.name);
+if (!cols.includes('role')) {
+  db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'");
+  console.log('[DB] Migration: added role column to users');
+}
+if (!cols.includes('notif_prefs')) {
+  db.exec("ALTER TABLE users ADD COLUMN notif_prefs TEXT DEFAULT '{\"partner_entry\":true,\"partner_comment\":true,\"match_found\":true,\"reveal\":true,\"daily_prompt\":true,\"system\":true}'");
+  console.log('[DB] Migration: added notif_prefs column to users');
+}
+if (!cols.includes('ecp_scores')) {
+  db.exec('ALTER TABLE users ADD COLUMN ecp_scores TEXT');
+  console.log('[DB] Migration: added ecp_scores column to users');
+}
+
+// Seed admin user from env
+if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
+  const existing = db.prepare('SELECT * FROM users WHERE email = ?').get(process.env.ADMIN_EMAIL);
+  if (existing) {
+    db.prepare('UPDATE users SET role = ? WHERE email = ?').run('admin', process.env.ADMIN_EMAIL);
+  } else {
+    const bcrypt = require('bcryptjs');
+    const hash = bcrypt.hashSync(process.env.ADMIN_PASSWORD, 10);
+    db.prepare('INSERT OR IGNORE INTO users (id, name, email, password_hash, college, year, gender, consent_given, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(crypto.randomUUID(), 'Admin', process.env.ADMIN_EMAIL, hash, '—', '—', 'other', 1, 'admin');
+    console.log('  ✓ Admin user seeded');
+  }
+}
 
 // Prepared statements
 const preparedStatements = {
@@ -135,7 +176,7 @@ const preparedStatements = {
   getUserById: db.prepare('SELECT * FROM users WHERE id = ?'),
   getUserByEmail: db.prepare('SELECT * FROM users WHERE email = ?'),
   insertUser: db.prepare('INSERT INTO users (id, name, email, password_hash, college, year, gender, consent_given, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'),
-  updateUser: db.prepare('UPDATE users SET name = ?, email = ?, college = ?, year = ?, gender = ?, match_pref_gender = ?, match_pref_year = ?, consent_given = ?, archetype = ? WHERE id = ?'),
+  updateUser: db.prepare('UPDATE users SET name = ?, email = ?, college = ?, year = ?, gender = ?, match_pref_gender = ?, match_pref_year = ?, consent_given = ?, archetype = ?, ecp_scores = ? WHERE id = ?'),
   updateUserPassword: db.prepare('UPDATE users SET password_hash = ? WHERE id = ?'),
   deleteUser: db.prepare('DELETE FROM users WHERE id = ?'),
   getAllUsers: db.prepare('SELECT * FROM users'),
@@ -200,7 +241,48 @@ const preparedStatements = {
   // Waitlist
   insertWaitlist: db.prepare('INSERT INTO waitlist (email, created_at) VALUES (?, ?)'),
   getWaitlistCount: db.prepare('SELECT COUNT(*) as count FROM waitlist'),
-  getWaitlistEmail: db.prepare('SELECT * FROM waitlist WHERE email = ?')
+  getWaitlistEmail: db.prepare('SELECT * FROM waitlist WHERE email = ?'),
+
+  // Admin
+  getAllUsersWithMatches: db.prepare(`
+    SELECT u.id, u.name, u.email, u.college, u.year, u.gender, u.archetype, u.role, u.consent_given, u.created_at,
+      m.id as match_id, m.started_at as match_started, m.active as match_active
+    FROM users u
+    LEFT JOIN matches m ON (u.id = m.user1_id OR u.id = m.user2_id)
+    ORDER BY u.created_at DESC
+  `),
+  getAllMatchesWithUsers: db.prepare(`
+    SELECT m.*, u1.name as user1_name, u1.email as user1_email, u2.name as user2_name, u2.email as user2_email
+    FROM matches m
+    JOIN users u1 ON m.user1_id = u1.id
+    JOIN users u2 ON m.user2_id = u2.id
+    ORDER BY m.started_at DESC
+  `),
+  getFlaggedEntries: db.prepare(`
+    SELECT e.*, u.name as user_name, u.email as user_email
+    FROM entries e
+    JOIN users u ON e.user_id = u.id
+    WHERE e.crisis_flag = 1 OR e.pii_flag = 1
+    ORDER BY e.created_at DESC
+  `),
+  getAllReports: db.prepare(`
+    SELECT r.*, u.name as user_name, u.email as user_email
+    FROM reports r
+    JOIN users u ON r.user_id = u.id
+    ORDER BY r.created_at DESC
+  `),
+  deleteReport: db.prepare('DELETE FROM reports WHERE id = ?'),
+  getDashboardStats: db.prepare(`
+    SELECT
+      (SELECT COUNT(*) FROM users) as total_users,
+      (SELECT COUNT(*) FROM users WHERE archetype IS NOT NULL) as users_with_archetype,
+      (SELECT COUNT(*) FROM matches WHERE active = 1) as active_matches,
+      (SELECT COUNT(*) FROM entries) as total_entries,
+      (SELECT COUNT(*) FROM entries WHERE crisis_flag = 1) as flagged_entries,
+      (SELECT COUNT(*) FROM reports) as total_reports,
+      (SELECT COUNT(*) FROM payments WHERE status = 'paid') as paid_purchases,
+      (SELECT COUNT(*) FROM waitlist) as waitlist_count
+  `)
 };
 
 // --- Initialization ---

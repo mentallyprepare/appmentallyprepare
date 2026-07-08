@@ -6,16 +6,15 @@ const { HELPLINES, prompts } = require('../config/constants');
 const { getMatchDay } = require('../utils/matching');
 const { analyzeJournal, getProvider } = require('../services/llm');
 const { notifyPartnerEntry, notifyPartnerComment } = require('../services/notifications');
+const validate = require('../middleware/validate');
 
 const router = express.Router();
 
-router.post('/entry', async (req, res) => {
+router.post('/entry', validate.entry, async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Unauthorized' });
   try {
     const userId = req.session.userId;
     const { text, mood } = req.body;
-    if (!text || !text.trim()) return res.status(400).json({ error: 'Entry text required' });
-    if (text.length > 5000) return res.status(400).json({ error: 'Entry too long (max 5000 chars)' });
     const safety = scanForSafety(text);
     const match = stmts.getMatch.get(userId, userId);
     if (!match) return res.status(400).json({ error: 'No match found' });
@@ -42,13 +41,11 @@ router.post('/entry', async (req, res) => {
   }
 });
 
-router.post('/comment', (req, res) => {
+router.post('/comment', validate.comment, (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Unauthorized' });
   try {
     const userId = req.session.userId;
     const { day, text } = req.body;
-    if (!text || !text.trim()) return res.status(400).json({ error: 'Comment text required' });
-    if (text.length > 500) return res.status(400).json({ error: 'Comment too long (max 500 chars)' });
     if (!day || day < 1 || day > 21) return res.status(400).json({ error: 'Invalid day' });
     const match = stmts.getMatch.get(userId, userId);
     if (!match) return res.status(400).json({ error: 'No match found' });

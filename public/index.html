@@ -1,452 +1,480 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Mentally Prepare — Waitlist</title>
-<meta name="description" content="Write anonymously for 21 days. First 500 users get a free trial run in April."/>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,500&family=Lora:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mentally Prepare — Prepare for What's Real</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { background: #1A1714; color: #F0EAE0; font-family: 'Inter', -apple-system, sans-serif; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+    ::selection { background: rgba(196,148,94,0.3); color: #F0EAE0; }
 
-<!-- Three.js for 3D elements -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    /* --- 3D Hero --- */
+    #hero-canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none; }
+    #hero { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem; }
+    #hero h1 { font-family: 'EB Garamond', serif; font-size: clamp(2.8rem, 7vw, 5.5rem); font-weight: 400; line-height: 1.15; max-width: 900px; margin-bottom: 1.5rem; opacity: 0; transform: translateY(30px); animation: fadeUp 1.2s ease 0.4s forwards; }
+    #hero h1 span { color: #C4945E; }
+    #hero p { font-size: clamp(1rem, 2vw, 1.25rem); color: #9C948A; max-width: 560px; line-height: 1.7; margin-bottom: 2.5rem; opacity: 0; transform: translateY(20px); animation: fadeUp 1s ease 0.7s forwards; }
+    .hero-cta { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; opacity: 0; transform: translateY(20px); animation: fadeUp 1s ease 1s forwards; }
+    .btn { padding: 0.9rem 2.2rem; border-radius: 100px; font-size: 0.95rem; font-weight: 500; text-decoration: none; transition: all 0.4s cubic-bezier(0.25,0.46,0.45,0.94); cursor: pointer; border: none; font-family: 'Inter', sans-serif; display: inline-flex; align-items: center; gap: 8px; position: relative; overflow: hidden; }
+    .btn-primary { background: #C4945E; color: #1A1714; }
+    .btn-primary:hover { background: #D4A46E; transform: translateY(-2px); box-shadow: 0 12px 40px rgba(196,148,94,0.25); }
+    .btn-ghost { background: transparent; color: #F0EAE0; border: 1px solid rgba(240,234,224,0.15); }
+    .btn-ghost:hover { background: rgba(240,234,224,0.05); border-color: rgba(240,234,224,0.3); transform: translateY(-2px); }
+    .scroll-hint { position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; opacity: 0; animation: fadeUp 1s ease 1.5s forwards; }
+    .scroll-hint span { font-size: 0.7rem; color: rgba(156,148,138,0.5); letter-spacing: 2px; text-transform: uppercase; }
+    .scroll-line { width: 1px; height: 40px; background: linear-gradient(to bottom, rgba(196,148,94,0.4), transparent); animation: scrollPulse 2s ease-in-out infinite; }
 
-<style>
-/* ══════════════════════════════════════════
-   RESET & VARIABLES
-   ══════════════════════════════════════════ */
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --rose:#D4859A;--rose-l:#EBB4C2;--rose-d:#9B4F66;
-  --gold:#C9A96E;--gold-l:#E8D0A0;
-  --purple:#7B5EA7;--purple-l:#B09FCC;
-  --ink:#F8F2FF;--ink-m:rgba(248,242,255,.62);--ink-s:rgba(248,242,255,.35);
-  --line:rgba(248,242,255,.07);--card:#0E0A18;--bg:#08050F;
-}
-html, body {
-  background:var(--bg);color:var(--ink);
-  font-family:'DM Sans',sans-serif;font-weight:300;
-  overflow:hidden; /* No scroll for waitlist splash */
-  height: 100vh;
-  width: 100vw;
-  -webkit-font-smoothing:antialiased;
-}
-::selection{background:var(--rose-d);color:var(--ink)}
+    @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+    @keyframes scrollPulse { 0%,100% { opacity: 0.4; } 50% { opacity: 0.8; } }
 
-/* ══════════════════════════════════════════
-   3D CANVAS WRAPPER
-   ══════════════════════════════════════════ */
-#canvas-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-  pointer-events: none;
-}
+    /* --- Sections --- */
+    section { position: relative; z-index: 1; padding: 6rem 2rem; max-width: 1100px; margin: 0 auto; }
+    .section-label { font-size: 0.7rem; letter-spacing: 3px; text-transform: uppercase; color: #C4945E; margin-bottom: 1rem; font-weight: 500; }
+    .section-title { font-family: 'EB Garamond', serif; font-size: clamp(2rem, 4vw, 3rem); font-weight: 400; line-height: 1.25; margin-bottom: 1rem; }
+    .section-sub { color: #9C948A; font-size: 1.05rem; line-height: 1.7; max-width: 600px; margin-bottom: 3rem; }
 
-/* ══════════════════════════════════════════
-   UI LAYER
-   ══════════════════════════════════════════ */
-.ui-layer {
-  position: relative;
-  z-index: 10;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 24px;
-  background: radial-gradient(circle at center, transparent 30%, rgba(8,5,15,0.85) 100%);
-}
+    /* --- How it Works --- */
+    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; margin-top: 2rem; }
+    .step { background: rgba(37,34,32,0.6); border: 1px solid rgba(240,234,224,0.06); border-radius: 20px; padding: 2.5rem 2rem; backdrop-filter: blur(20px); transition: all 0.6s cubic-bezier(0.25,0.46,0.45,0.94); transform: translateY(40px); opacity: 0; }
+    .step.visible { transform: translateY(0); opacity: 1; }
+    .step:hover { transform: translateY(-6px); border-color: rgba(196,148,94,0.2); box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+    .step-num { font-family: 'EB Garamond', serif; font-size: 2.5rem; color: rgba(196,148,94,0.3); margin-bottom: 0.5rem; }
+    .step h3 { font-size: 1.2rem; font-weight: 500; margin-bottom: 0.75rem; }
+    .step p { color: #9C948A; font-size: 0.9rem; line-height: 1.6; }
 
-.brand {
-  position: absolute;
-  top: 40px;
-  left: 40px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-family: 'Playfair Display', serif;
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: -0.5px;
-}
-.brand-orb {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--rose), var(--purple));
-  animation: breathe 4s ease-in-out infinite;
-}
+    /* --- Interactive Mockup --- */
+    .mockup-wrap { perspective: 1200px; margin: 3rem 0; }
+    .mockup { background: #252220; border: 1px solid rgba(240,234,224,0.1); border-radius: 24px; padding: 2.5rem; max-width: 500px; margin: 0 auto; transition: transform 0.2s ease; transform-style: preserve-3d; position: relative; overflow: hidden; }
+    .mockup::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 30% 20%, rgba(196,148,94,0.06), transparent 70%); pointer-events: none; }
+    .mockup-dots { display: flex; gap: 6px; margin-bottom: 1.5rem; }
+    .mockup-dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(240,234,224,0.1); }
+    .mockup-dot:nth-child(1) { background: #B86C5A; }
+    .mockup-dot:nth-child(2) { background: #C4945E; }
+    .mockup-dot:nth-child(3) { background: #7A8F6B; }
+    .mockup-step { display: none; animation: mockupFade 0.5s ease; }
+    .mockup-step.active { display: block; }
+    @keyframes mockupFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .mockup-step h4 { font-size: 1.1rem; font-weight: 500; margin-bottom: 0.5rem; }
+    .mockup-step p { color: #9C948A; font-size: 0.85rem; line-height: 1.6; margin-bottom: 1.25rem; }
+    .mockup-input { background: rgba(240,234,224,0.04); border: 1px solid rgba(240,234,224,0.08); border-radius: 12px; padding: 1rem 1.25rem; color: #F0EAE0; font-size: 0.9rem; width: 100%; outline: none; transition: border-color 0.3s; font-family: 'EB Garamond', serif; }
+    .mockup-input:focus { border-color: rgba(196,148,94,0.4); }
+    .mockup-input::placeholder { color: rgba(156,148,138,0.4); }
+    .mockup-chip { display: inline-block; padding: 0.6rem 1.2rem; border-radius: 100px; font-size: 0.8rem; border: 1px solid rgba(240,234,224,0.1); cursor: pointer; transition: all 0.3s; background: transparent; color: #9C948A; margin: 0.3rem; }
+    .mockup-chip:hover, .mockup-chip.selected { border-color: #C4945E; color: #F0EAE0; background: rgba(196,148,94,0.1); }
+    .mockup-nav { display: flex; justify-content: space-between; margin-top: 1.5rem; align-items: center; }
+    .mockup-btn { padding: 0.6rem 1.5rem; border-radius: 100px; font-size: 0.8rem; background: #C4945E; color: #1A1714; border: none; cursor: pointer; font-weight: 500; transition: all 0.3s; font-family: 'Inter', sans-serif; }
+    .mockup-btn:hover { background: #D4A46E; }
+    .mockup-btn:disabled { opacity: 0.3; cursor: default; }
+    .mockup-step-indicator { display: flex; gap: 6px; }
+    .mockup-step-indicator span { width: 6px; height: 6px; border-radius: 50%; background: rgba(240,234,224,0.1); transition: all 0.3s; }
+    .mockup-step-indicator span.active { background: #C4945E; width: 20px; border-radius: 3px; }
 
-.hero-content {
-  text-align: center;
-  max-width: 600px;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  background: rgba(14, 10, 24, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  padding: 60px 48px;
-  border-radius: 32px;
-  box-shadow: 0 30px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
-  animation: fadeUp 1s ease 0.2s both;
-}
+    /* --- Emotion Picker --- */
+    .emotion-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 1rem 0; }
+    .emotion-item { padding: 0.8rem; border-radius: 12px; border: 1px solid rgba(240,234,224,0.06); text-align: center; cursor: pointer; transition: all 0.3s; background: rgba(240,234,224,0.02); font-size: 0.8rem; color: #9C948A; }
+    .emotion-item:hover { border-color: rgba(196,148,94,0.3); background: rgba(196,148,94,0.05); color: #F0EAE0; }
+    .emotion-item.selected { border-color: #C4945E; background: rgba(196,148,94,0.1); color: #F0EAE0; }
 
-.hero-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 20px;
-  border-radius: 50px;
-  border: 1px solid rgba(201, 169, 110, 0.3); /* Gold badge for free trial */
-  background: rgba(201, 169, 110, 0.08);
-  margin-bottom: 32px;
-  font-size: 12px;
-  color: var(--gold-l);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  animation: pulseGold 3s infinite;
-}
-.hero-badge-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--gold);
-}
+    /* --- Exchange Preview --- */
+    .exchange-cards { display: grid; gap: 1rem; margin: 2rem 0; }
+    .exchange-card { background: rgba(37,34,32,0.6); border: 1px solid rgba(240,234,224,0.06); border-radius: 16px; padding: 1.5rem; backdrop-filter: blur(20px); transition: all 0.6s cubic-bezier(0.25,0.46,0.45,0.94); transform: translateX(-30px); opacity: 0; }
+    .exchange-card:nth-child(2) { transform: translateX(30px); }
+    .exchange-card.visible { transform: translateX(0); opacity: 1; }
+    .exchange-card:hover { border-color: rgba(196,148,94,0.15); }
+    .exchange-from { font-size: 0.75rem; color: #C4945E; margin-bottom: 0.5rem; letter-spacing: 1px; text-transform: uppercase; }
+    .exchange-text { font-family: 'EB Garamond', serif; font-size: 1.05rem; line-height: 1.6; color: #F0EAE0; }
+    .exchange-text i { color: #9C948A; }
 
-.hero-h1 {
-  font-family: 'Playfair Display', serif;
-  font-size: clamp(36px, 5vw, 56px);
-  font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -1px;
-  margin-bottom: 24px;
-}
-.hero-h1 em {
-  font-style: italic;
-  color: var(--rose-l);
-  font-weight: 400;
-}
+    /* --- Stats --- */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 2rem; text-align: center; margin: 3rem 0; }
+    .stat-num { font-family: 'EB Garamond', serif; font-size: clamp(2.5rem, 4vw, 3.5rem); color: #C4945E; }
+    .stat-label { color: #9C948A; font-size: 0.85rem; margin-top: 0.3rem; }
 
-.hero-sub {
-  font-family: 'Lora', serif;
-  font-style: italic;
-  font-size: clamp(16px, 2vw, 18px);
-  color: var(--ink-m);
-  line-height: 1.7;
-  margin-bottom: 48px;
-}
+    /* --- Quote --- */
+    .quote-wrap { text-align: center; padding: 4rem 2rem; position: relative; }
+    .quote-mark { font-family: 'EB Garamond', serif; font-size: 4rem; color: rgba(196,148,94,0.15); line-height: 1; }
+    .quote-text { font-family: 'EB Garamond', serif; font-size: clamp(1.3rem, 2.5vw, 1.8rem); font-style: italic; line-height: 1.6; max-width: 700px; margin: 0.5rem auto 1rem; color: #F0EAE0; }
+    .quote-author { color: #9C948A; font-size: 0.85rem; }
 
-/* ══════════════════════════════════════════
-   WAITLIST FORM
-   ══════════════════════════════════════════ */
-.waitlist-form {
-  position: relative;
-  display: flex;
-  gap: 8px;
-  width: 100%;
-}
-.waitlist-input {
-  flex: 1;
-  background: rgba(248, 242, 255, 0.03);
-  border: 1px solid rgba(248, 242, 255, 0.1);
-  padding: 18px 24px;
-  border-radius: 60px;
-  color: var(--ink);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 15px;
-  outline: none;
-  transition: all 0.3s;
-}
-.waitlist-input::placeholder { color: var(--ink-s); }
-.waitlist-input:focus {
-  border-color: rgba(212, 133, 154, 0.5);
-  background: rgba(248, 242, 255, 0.06);
-  box-shadow: 0 0 20px rgba(212, 133, 154, 0.15);
-}
+    /* --- Safety --- */
+    .safety-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; }
+    .safety-item { background: rgba(37,34,32,0.4); border: 1px solid rgba(240,234,224,0.05); border-radius: 16px; padding: 1.5rem; transition: all 0.4s; transform: translateY(30px); opacity: 0; }
+    .safety-item.visible { transform: translateY(0); opacity: 1; }
+    .safety-icon { font-size: 1.5rem; margin-bottom: 0.75rem; display: block; }
+    .safety-item h4 { font-size: 0.9rem; font-weight: 500; margin-bottom: 0.4rem; }
+    .safety-item p { color: #9C948A; font-size: 0.8rem; line-height: 1.5; }
 
-.btn-primary {
-  background: linear-gradient(135deg, var(--rose-d), var(--purple));
-  padding: 0 40px;
-  border-radius: 60px;
-  font-size: 14px;
-  font-weight: 500;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  transition: all 0.4s;
-  border: none;
-  color: var(--ink);
-  cursor: pointer;
-  box-shadow: 0 8px 24px rgba(212,133,154,0.25);
-}
-.btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 32px rgba(212,133,154,0.4);
-}
+    /* --- CTA --- */
+    #cta { text-align: center; padding: 8rem 2rem; }
+    #cta h2 { font-family: 'EB Garamond', serif; font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 400; max-width: 700px; margin: 0 auto 1rem; }
+    #cta p { color: #9C948A; max-width: 500px; margin: 0 auto 2rem; line-height: 1.7; }
 
-.response-msg {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  text-align: center;
-  font-size: 13px;
-  margin-top: 16px;
-  color: var(--green);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-.response-msg.error {
-  color: var(--rose);
-}
-.response-msg.visible {
-  opacity: 1;
-}
+    /* --- Footer --- */
+    footer { border-top: 1px solid rgba(240,234,224,0.05); padding: 3rem 2rem; text-align: center; color: rgba(156,148,138,0.4); font-size: 0.8rem; }
+    footer a { color: #9C948A; text-decoration: none; margin: 0 1rem; transition: color 0.3s; }
+    footer a:hover { color: #C4945E; }
 
-/* ══════════════════════════════════════════
-   ANIMATIONS
-   ══════════════════════════════════════════ */
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(30px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes breathe {
-  0%, 100% { transform: scale(1); opacity: 0.8; }
-  50% { transform: scale(1.15); opacity: 1; }
-}
-@keyframes pulseGold {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(201, 169, 110, 0.2); }
-  50% { box-shadow: 0 0 0 10px rgba(201, 169, 110, 0); }
-}
+    /* --- Scrollbar --- */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #1A1714; }
+    ::-webkit-scrollbar-thumb { background: rgba(196,148,94,0.2); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(196,148,94,0.4); }
 
-@media(max-width: 600px) {
-  .hero-content { padding: 40px 24px; }
-  .waitlist-form { flex-direction: column; }
-  .btn-primary { padding: 18px 40px; }
-  .brand { top: 24px; left: 24px; }
-}
-</style>
+    @media (max-width: 640px) {
+      section { padding: 4rem 1.25rem; }
+      .step { padding: 2rem 1.5rem; }
+      .mockup { padding: 1.5rem; margin: 0 -0.5rem; }
+      .emotion-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
 </head>
 <body>
 
-<!-- 3D Background Container -->
-<div id="canvas-container"></div>
+  <!-- 3D Canvas -->
+  <canvas id="hero-canvas"></canvas>
 
-<!-- UI Overlay -->
-<div class="ui-layer">
-  
-  <div class="brand">
-    <div class="brand-orb"></div>
-    Mentally Prepare
-  </div>
-
-  <div class="hero-content">
-    <div class="hero-badge">
-      <span class="hero-badge-dot"></span>
-      April Trial Run: First 500 users free
+  <!-- Hero -->
+  <section id="hero">
+    <h1>Prepare for <span>what's real.</span><br/>You don't have to do it alone.</h1>
+    <p>One honest reflection before the moments that matter. Yours stays private. But if you choose, someone preparing for something real will read it — and you'll read theirs.</p>
+    <div class="hero-cta">
+      <a href="/app?screen=s-signup" class="btn btn-primary">Begin tonight</a>
+      <a href="#how" class="btn btn-ghost">How it works</a>
     </div>
-    
-    <h1 class="hero-h1">You were never meant to carry this <em>alone.</em></h1>
-    <p class="hero-sub">An anonymous 21-day journal where you write honestly, and a student from another college writes back. Join the waitlist for early access.</p>
-    
-    <form class="waitlist-form" id="waitlistForm">
-      <input type="email" class="waitlist-input" id="waitlistEmail" placeholder="Your college email address..." required autocomplete="email">
-      <button type="submit" class="btn-primary" id="waitlistBtn">Join Waitlist</button>
-      <div class="response-msg" id="responseMsg"></div>
-    </form>
+    <div class="scroll-hint">
+      <span>Scroll</span>
+      <div class="scroll-line"></div>
+    </div>
+  </section>
+
+  <!-- How it Works -->
+  <section id="how">
+    <div class="section-label">How it works</div>
+    <h2 class="section-title">Three quiet minutes.<br/>One real thing.</h2>
+    <p class="section-sub">No feed. No followers. No performance. Just you and what's actually happening.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <h3>Name what's real</h3>
+        <p>A conversation you're dreading. An exam. A decision. Something shifted today. Just name it.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <h3>Understand how you feel</h3>
+        <p>Four gentle questions uncover what you're afraid of and what you actually need. No jargon. No clinical language.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <h3>Share if it feels right</h3>
+        <p>Your reflection stays private. Or it reaches one anonymous peer who's preparing for something too — and theirs reaches you.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Mockup -->
+  <section>
+    <div class="section-label">Experience it</div>
+    <h2 class="section-title">What opens when you sit down to write.</h2>
+    <p class="section-sub">This is the full preparation flow. It takes three minutes.</p>
+    <div class="mockup-wrap">
+      <div class="mockup" id="mockup">
+        <div class="mockup-dots"><div class="mockup-dot"></div><div class="mockup-dot"></div><div class="mockup-dot"></div></div>
+
+        <!-- Step 1 -->
+        <div class="mockup-step active" data-step="0">
+          <h4>What's something real coming up for you?</h4>
+          <p>It can be big or small. A conversation you're avoiding works.</p>
+          <input class="mockup-input" id="mock-input" placeholder="Write what comes to mind..." autocomplete="off" />
+        </div>
+
+        <!-- Step 2 -->
+        <div class="mockup-step" data-step="1">
+          <h4>How do you feel about it?</h4>
+          <p>Pick what's closest, or write your own.</p>
+          <div class="emotion-grid" id="emotion-grid">
+            <div class="emotion-item">Anxious</div>
+            <div class="emotion-item">Heavy</div>
+            <div class="emotion-item">Numb</div>
+            <div class="emotion-item">Restless</div>
+            <div class="emotion-item">Sad</div>
+            <div class="emotion-item">Angry</div>
+            <div class="emotion-item">Scared</div>
+            <div class="emotion-item">Tired</div>
+            <div class="emotion-item">I don't know</div>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="mockup-step" data-step="2">
+          <h4>What are you afraid might happen?</h4>
+          <p>Honest answers only. No one else sees this unless you choose.</p>
+          <input class="mockup-input" placeholder="I'm afraid that..." autocomplete="off" />
+        </div>
+
+        <!-- Step 4 -->
+        <div class="mockup-step" data-step="3">
+          <h4>What do you need right now?</h4>
+          <p>Even if it's small. Even if it's just "to be heard."</p>
+          <input class="mockup-input" placeholder="I need..." autocomplete="off" />
+        </div>
+
+        <!-- Step 5 -->
+        <div class="mockup-step" data-step="4">
+          <h4>You've prepared.</h4>
+          <p style="color:#C4945E;">Your reflection is saved. It stays here unless you choose to share it with someone who's preparing for something too.</p>
+          <div style="display:flex;gap:10px;margin-top:1rem;flex-wrap:wrap;">
+            <button class="mockup-btn">Keep private</button>
+            <button class="mockup-btn" style="background:transparent;border:1px solid rgba(196,148,94,0.3);color:#C4945E;">Share anonymously</button>
+          </div>
+        </div>
+
+        <div class="mockup-nav">
+          <div class="mockup-step-indicator" id="step-indicator">
+            <span class="active"></span><span></span><span></span><span></span><span></span>
+          </div>
+          <button class="mockup-btn" id="mock-next">Next</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Exchange Preview -->
+  <section>
+    <div class="section-label">Witnessed</div>
+    <h2 class="section-title">Someone else is preparing for something real too.</h2>
+    <p class="section-sub">When you share, your reflection reaches one person. They share theirs back. No chat. No pressure. Just witnessed preparation.</p>
+    <div class="exchange-cards">
+      <div class="exchange-card">
+        <div class="exchange-from">Anonymous peer — preparing for a difficult conversation</div>
+        <div class="exchange-text">"I've been putting this off for weeks. Writing it down made me realize I'm not scared of the conversation itself — I'm scared of how they'll see me after."</div>
+      </div>
+      <div class="exchange-card">
+        <div class="exchange-from">You — preparing for an exam you're not ready for</div>
+        <div class="exchange-text"><i>"I'm afraid I'll freeze. But I wrote it, and now it feels less like a secret I'm carrying alone."</i></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <section>
+    <div class="stats-grid">
+      <div><div class="stat-num">57%</div><div class="stat-label">of students report feeling lonely</div></div>
+      <div><div class="stat-num">3 min</div><div class="stat-label">Average preparation session</div></div>
+      <div><div class="stat-num">1:1</div><div class="stat-label">One peer at a time</div></div>
+      <div><div class="stat-num">18+</div><div class="stat-label">Adults only</div></div>
+    </div>
+  </section>
+
+  <!-- Quote -->
+  <div class="quote-wrap">
+    <div class="quote-mark">"</div>
+    <div class="quote-text" id="typing-quote">By day three I was writing things I hadn't even admitted to myself. Someone read it. Nothing bad happened. I felt less alone.</div>
+    <div class="quote-author">— Early user, engineering student</div>
   </div>
 
-</div>
+  <!-- Safety -->
+  <section>
+    <div class="section-label">Safe by design</div>
+    <h2 class="section-title">Private. Not therapy. Not a social network.</h2>
+    <p class="section-sub">Your words are not content. This is a preparation ritual, witnessed by design.</p>
+    <div class="safety-grid">
+      <div class="safety-item"><span class="safety-icon">&#9673;</span><h4>Anonymous first</h4><p>No real names, no photos, no public profile. Your identity stays hidden until you choose otherwise.</p></div>
+      <div class="safety-item"><span class="safety-icon">&#9673;</span><h4>No chat, no feed</h4><p>There's nothing to scroll. No likes, no followers, no performance. Just written reflection, exchanged with care.</p></div>
+      <div class="safety-item"><span class="safety-icon">&#9673;</span><h4>Block and report</h4><p>Every shared note can be reported. Every peer connection can be closed instantly. One tap, no explanation needed.</p></div>
+      <div class="safety-item"><span class="safety-icon">&#9673;</span><h4>18+ only</h4><p>Designed for adults. Clear boundaries. Clear safety resources. We take safety seriously because anonymous connection requires it.</p></div>
+    </div>
+  </section>
 
-<script>
-// --- WAITLIST LOGIC ---
-const form = document.getElementById('waitlistForm');
-const emailInput = document.getElementById('waitlistEmail');
-const btn = document.getElementById('waitlistBtn');
-const responseMsg = document.getElementById('responseMsg');
+  <!-- CTA -->
+  <section id="cta">
+    <h2>Something real is coming.<br/>Prepare for how it might feel.</h2>
+    <p>Free during early access. 18+. Anonymous. Your first preparation takes three minutes.</p>
+    <a href="/app?screen=s-signup" class="btn btn-primary" style="font-size:1.05rem;padding:1rem 2.5rem;">Begin tonight</a>
+  </section>
 
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const email = emailInput.value.trim();
-  if(!email) return;
+  <!-- Footer -->
+  <footer>
+    <div style="margin-bottom:1rem;">
+      <a href="/safety">Safety</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+      <a href="https://instagram.com/mymentallyprepare">Instagram</a>
+    </div>
+    <div>Mentally Prepare &middot; 2026</div>
+  </footer>
 
-  btn.disabled = true;
-  btn.textContent = 'Joining...';
-  responseMsg.classList.remove('visible', 'error');
+  <!-- Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    // === THREE.JS PARTICLE BACKGROUND ===
+    (function() {
+      const canvas = document.getElementById('hero-canvas');
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-  try {
-    const res = await fetch('/api/waitlist', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
+      // Particles
+      const count = 2000;
+      const positions = new Float32Array(count * 3);
+      const sizes = new Float32Array(count);
+      for (let i = 0; i < count; i++) {
+        const radius = 5 + Math.random() * 15;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos((Math.random() * 2) - 1);
+        positions[i*3] = radius * Math.sin(phi) * Math.cos(theta);
+        positions[i*3+1] = radius * Math.cos(phi);
+        positions[i*3+2] = radius * Math.sin(phi) * Math.sin(theta);
+        sizes[i] = 0.5 + Math.random() * 2;
+      }
+
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+      const material = new THREE.PointsMaterial({
+        color: 0xC4945E,
+        size: 0.04,
+        transparent: true,
+        opacity: 0.6,
+        blending: THREE.AdditiveBlending,
+        sizeAttenuation: true,
+      });
+
+      const particles = new THREE.Points(geometry, material);
+      scene.add(particles);
+
+      // Inner glow sphere
+      const glowGeo = new THREE.SphereGeometry(2.5, 32, 32);
+      const glowMat = new THREE.MeshBasicMaterial({
+        color: 0xC4945E,
+        transparent: true,
+        opacity: 0.03,
+        wireframe: true,
+      });
+      const glowSphere = new THREE.Mesh(glowGeo, glowMat);
+      scene.add(glowSphere);
+
+      camera.position.z = 12;
+
+      // Mouse tracking
+      let mouseX = 0, mouseY = 0;
+      document.addEventListener('mousemove', (e) => {
+        mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+        mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+      });
+
+      // Resize
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      function animate() {
+        requestAnimationFrame(animate);
+        particles.rotation.x += 0.0003;
+        particles.rotation.y += 0.0005;
+        glowSphere.rotation.x += 0.0008;
+        glowSphere.rotation.y += 0.001;
+        // Parallax follow
+        particles.rotation.x += mouseY * 0.0002;
+        particles.rotation.y += mouseX * 0.0002;
+        renderer.render(scene, camera);
+      }
+      animate();
+    })();
+
+    // === SCROLL ANIMATIONS ===
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
+
+    document.querySelectorAll('.step, .exchange-card, .safety-item').forEach(el => observer.observe(el));
+
+    // === INTERACTIVE MOCKUP ===
+    let mockStep = 0;
+    const totalSteps = 5;
+    const nextBtn = document.getElementById('mock-next');
+    const steps = document.querySelectorAll('.mockup-step');
+    const indicator = document.getElementById('step-indicator');
+
+    nextBtn.addEventListener('click', () => {
+      if (mockStep < totalSteps - 1) {
+        steps[mockStep].classList.remove('active');
+        mockStep++;
+        steps[mockStep].classList.add('active');
+        indicator.querySelectorAll('span').forEach((s, i) => s.classList.toggle('active', i === mockStep));
+        if (mockStep === totalSteps - 1) nextBtn.textContent = 'Done';
+      } else {
+        // Reset
+        steps[mockStep].classList.remove('active');
+        mockStep = 0;
+        steps[mockStep].classList.add('active');
+        indicator.querySelectorAll('span').forEach((s, i) => s.classList.toggle('active', i === 0));
+        nextBtn.textContent = 'Next';
+      }
     });
-    const data = await res.json();
 
-    if (res.ok) {
-      if(data.error) throw new Error(data.error);
-      responseMsg.textContent = `${data.message} (${data.count || 0}/500 spots filled)`;
-      emailInput.value = '';
-    } else {
-      throw new Error(data.error || 'Failed to join waitlist.');
+    // Emotion selection
+    document.querySelectorAll('.emotion-item').forEach(el => {
+      el.addEventListener('click', () => {
+        el.classList.toggle('selected');
+      });
+    });
+
+    // 3D Tilt on mockup
+    const mockup = document.getElementById('mockup');
+    mockup.addEventListener('mousemove', (e) => {
+      const rect = mockup.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width - 0.5;
+      const y = (e.clientY - rect.top) / rect.height - 0.5;
+      mockup.style.transform = `rotateY(${x * 6}deg) rotateX(${-y * 6}deg)`;
+    });
+    mockup.addEventListener('mouseleave', () => {
+      mockup.style.transform = 'rotateY(0deg) rotateX(0deg)';
+    });
+
+    // Scroll-based parallax for hero
+    window.addEventListener('scroll', () => {
+      const scrolled = window.pageYOffset;
+      const hero = document.getElementById('hero');
+      if (hero) {
+        hero.style.transform = `translateY(${scrolled * 0.15}px)`;
+        hero.style.opacity = Math.max(0, 1 - scrolled / 500);
+      }
+    });
+
+    // Typing effect for quote
+    const quoteEl = document.getElementById('typing-quote');
+    const quoteText = quoteEl.textContent;
+    quoteEl.textContent = '';
+    let charIdx = 0;
+    function typeQuote() {
+      if (charIdx < quoteText.length) {
+        quoteEl.textContent += quoteText[charIdx];
+        charIdx++;
+        setTimeout(typeQuote, 20 + Math.random() * 30);
+      }
     }
-  } catch (err) {
-    responseMsg.textContent = err.message;
-    responseMsg.classList.add('error');
-  } finally {
-    responseMsg.classList.add('visible');
-    btn.disabled = false;
-    btn.textContent = 'Join Waitlist';
-  }
-});
 
-// --- THREE.JS 3D BACKGROUND ---
-const container = document.getElementById('canvas-container');
-
-// Scene, Camera, Renderer
-const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x08050F, 0.001);
-
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.z = 30;
-
-const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-container.appendChild(renderer.domElement);
-
-// Create Particles (Aesthetic Stars/Dust)
-const particlesGeometry = new THREE.BufferGeometry();
-const particlesCount = 2000;
-const posArray = new Float32Array(particlesCount * 3);
-const colorsArray = new Float32Array(particlesCount * 3);
-
-// Colors
-const colorRose = new THREE.Color(0xD4859A);
-const colorPurple = new THREE.Color(0x7B5EA7);
-const colorGold = new THREE.Color(0xC9A96E);
-
-for(let i = 0; i < particlesCount * 3; i+=3) {
-  // Spread across wider area
-  posArray[i] = (Math.random() - 0.5) * 100;    // x
-  posArray[i+1] = (Math.random() - 0.5) * 100;  // y
-  posArray[i+2] = (Math.random() - 0.5) * 50 - 10; // z
-
-  // Assign random color from brand palette
-  const randColor = Math.random();
-  let c;
-  if(randColor < 0.33) c = colorRose;
-  else if(randColor < 0.66) c = colorPurple;
-  else c = colorGold;
-
-  colorsArray[i] = c.r;
-  colorsArray[i+1] = c.g;
-  colorsArray[i+2] = c.b;
-}
-
-particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-particlesGeometry.setAttribute('color', new THREE.BufferAttribute(colorsArray, 3));
-
-// Create custom shader material for soft glowing particles
-const particlesMaterial = new THREE.PointsMaterial({
-  size: 0.15,
-  vertexColors: true,
-  transparent: true,
-  opacity: 0.6,
-  blending: THREE.AdditiveBlending,
-});
-const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
-scene.add(particlesMesh);
-
-// Create Floating Glass Morphs (3D Objects reflecting the brand)
-const morphGrp = new THREE.Group();
-scene.add(morphGrp);
-
-const shapes = [
-  new THREE.IcosahedronGeometry(3, 1),
-  new THREE.TorusGeometry(3, 0.8, 16, 100),
-  new THREE.OctahedronGeometry(3, 2)
-];
-
-const glassMaterial = new THREE.MeshPhysicalMaterial({
-  color: 0xffffff,
-  metalness: 0.1,
-  roughness: 0.1,
-  transmission: 0.9, // glass like
-  thickness: 0.5,
-  envMapIntensity: 1,
-  clearcoat: 1,
-  clearcoatRoughness: 0.1,
-});
-
-const meshes = [];
-for(let i=0; i<3; i++) {
-  const mesh = new THREE.Mesh(shapes[i], glassMaterial);
-  mesh.position.set(
-    (Math.random() - 0.5) * 40,
-    (Math.random() - 0.5) * 20,
-    (Math.random() - 0.5) * 10 - 5
-  );
-  morphGrp.add(mesh);
-  meshes.push(mesh);
-}
-
-// Lighting for glass
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
-scene.add(ambientLight);
-
-const pointLight1 = new THREE.PointLight(0xD4859A, 2, 50); // Rose
-pointLight1.position.set(10, 10, 10);
-scene.add(pointLight1);
-
-const pointLight2 = new THREE.PointLight(0x7B5EA7, 2, 50); // Purple
-pointLight2.position.set(-10, -10, 10);
-scene.add(pointLight2);
-
-// Mouse interaction
-let mouseX = 0;
-let mouseY = 0;
-document.addEventListener('mousemove', (event) => {
-  mouseX = (event.clientX / window.innerWidth) - 0.5;
-  mouseY = (event.clientY / window.innerHeight) - 0.5;
-});
-
-// Animation Loop
-const clock = new THREE.Clock();
-
-function animate() {
-  requestAnimationFrame(animate);
-  const elapsedTime = clock.getElapsedTime();
-
-  // Slow particle rotation
-  particlesMesh.rotation.y = elapsedTime * 0.05;
-  particlesMesh.rotation.x = elapsedTime * 0.02;
-
-  // Float morphed items
-  meshes.forEach((mesh, index) => {
-    mesh.rotation.x += 0.01 * (index + 1);
-    mesh.rotation.y += 0.01 * (index + 1);
-    mesh.position.y += Math.sin(elapsedTime * 0.5 + index) * 0.01;
-  });
-
-  // Parallax camera effect tracking mouse softly
-  camera.position.x += (mouseX * 10 - camera.position.x) * 0.05;
-  camera.position.y += (-mouseY * 10 - camera.position.y) * 0.05;
-  camera.lookAt(scene.position);
-
-  renderer.render(scene, camera);
-}
-animate();
-
-// Resize handler
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
-
-</script>
+    const quoteObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && charIdx === 0) {
+          typeQuote();
+        }
+      });
+    }, { threshold: 0.5 });
+    quoteObserver.observe(document.querySelector('.quote-wrap'));
+  </script>
 </body>
 </html>

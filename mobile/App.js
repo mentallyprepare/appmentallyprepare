@@ -1,190 +1,135 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text, View, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator, Animated, Pressable, StyleSheet } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { theme } from './src/theme';
-import { api } from './src/services/api';
+import { navigationRef } from './src/utils/navigationRef';
 
-// Auth screens
-import LandingScreen from './src/screens/auth/LandingScreen';
-import LoginScreen from './src/screens/auth/LoginScreen';
-import RegisterScreen from './src/screens/auth/RegisterScreen';
+SplashScreen.preventAutoHideAsync();
 
-// Onboarding screens
-import SplashScreen from './src/screens/onboarding/SplashScreen';
-import PromiseScreen from './src/screens/onboarding/PromiseScreen';
-import NameScreen from './src/screens/onboarding/NameScreen';
-import IntentionScreen from './src/screens/onboarding/IntentionScreen';
-import ArchetypeTeaseScreen from './src/screens/onboarding/ArchetypeTeaseScreen';
-import PermissionsScreen from './src/screens/onboarding/PermissionsScreen';
-import ReadyScreen from './src/screens/onboarding/ReadyScreen';
+import SplashScreenView from './src/screens/ritual/SplashScreen';
+import OnboardingScreen from './src/screens/ritual/OnboardingScreen';
+import TonightScreen from './src/screens/ritual/TonightScreen';
+import RoomsScreen from './src/screens/ritual/RoomsScreen';
+import SilentRoomScreen from './src/screens/ritual/SilentRoomScreen';
+import TasteScreen from './src/screens/ritual/TasteScreen';
+import MatchScreen from './src/screens/ritual/MatchScreen';
 
-// Quiz
-import QuizScreen from './src/screens/quiz/QuizScreen';
-import ResultScreen from './src/screens/quiz/ResultScreen';
-
-// Main tabs
-import JournalScreen from './src/screens/main/JournalScreen';
-import PartnerScreen from './src/screens/main/PartnerScreen';
-import ProfileScreen from './src/screens/main/ProfileScreen';
-import SettingsScreen from './src/screens/main/SettingsScreen';
-import RevealScreen from './src/screens/main/RevealScreen';
-import NotificationsScreen from './src/screens/main/NotificationsScreen';
-
-const Stack = createNativeStackNavigator();
+const RootStack = createNativeStackNavigator();
+const OnboardStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-function TabIcon({ label, focused, unread }) {
-  const icons = {
-    Journal: '📝',
-    Partner: '🌙',
-    Notifications: '🔔',
-    Profile: '👤',
-    Settings: '⚙️',
-    Reveal: '🔓',
-  };
+const tabIconMap = {
+  Tonight: { focused: 'moon', unfocused: 'moon-outline' },
+  Rooms: { focused: 'grid', unfocused: 'grid-outline' },
+  Silent: { focused: 'remove', unfocused: 'remove-outline' },
+  Taste: { focused: 'star', unfocused: 'star-outline' },
+  Match: { focused: 'heart-circle', unfocused: 'heart-circle-outline' },
+};
+
+function TabIcon({ routeName, focused }) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const icon = tabIconMap[routeName] || { focused: 'ellipse', unfocused: 'ellipse-outline' };
+
+  useEffect(() => {
+    Animated.spring(scale, { toValue: focused ? 1 : 0.92, useNativeDriver: true, ...theme.animation.spring }).start();
+  }, [focused]);
+
   return (
-    <View style={{ alignItems: 'center', gap: 2 }}>
-      <View>
-        <Text style={{ fontSize: 18, opacity: focused ? 1 : 0.4 }}>{icons[label] || '○'}</Text>
-        {label === 'Notifications' && unread > 0 && (
-          <View style={{ position: 'absolute', top: -4, right: -8, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: '#9B4F66', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 }}>
-            <Text style={{ fontSize: 8, fontWeight: '600', color: '#F8F2FF' }}>{unread > 9 ? '9+' : unread}</Text>
-          </View>
-        )}
-      </View>
-      <Text style={{ fontSize: 8, color: focused ? theme.roseL : theme.inkS, letterSpacing: 1, textTransform: 'uppercase' }}>
-        {label}
-      </Text>
+    <View style={tabStyles.iconWrap}>
+      <Animated.View style={{ transform: [{ scale }] }}>
+        <Ionicons name={focused ? icon.focused : icon.unfocused} size={20} color={focused ? theme.lavender : theme.textFaint} />
+      </Animated.View>
+      <Text style={[tabStyles.tabLabel, focused && tabStyles.tabLabelActive]}>{routeName}</Text>
     </View>
   );
 }
 
-function MainTabs() {
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  useEffect(() => {
-    const fetchUnread = async () => {
-      try {
-        const data = await api.me();
-        setUnreadCount(data.unread || 0);
-      } catch { }
-    };
-    fetchUnread();
-    const interval = setInterval(fetchUnread, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
+function TabNav() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused }) => <TabIcon label={route.name} focused={focused} unread={unreadCount} />,
+        tabBarIcon: ({ focused }) => <TabIcon routeName={route.name} focused={focused} />,
         tabBarShowLabel: false,
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: 'rgba(8,5,15,0.92)',
-          borderTopColor: 'rgba(248,242,255,0.07)',
-          borderTopWidth: 1,
-          paddingBottom: 12,
-          paddingTop: 12,
-          height: 72,
+          backgroundColor: 'rgba(8,7,20,0.98)',
+          borderTopColor: 'rgba(255,255,255,0.03)',
+          borderTopWidth: 0.5,
+          paddingBottom: 8,
+          paddingTop: 8,
+          height: 64,
+          elevation: 0,
         },
+        tabBarButton: (props) => <Pressable {...props} android_ripple={{ color: 'transparent' }} />,
       })}
     >
-      <Tab.Screen name="Journal" component={JournalScreen} />
-      <Tab.Screen name="Partner" component={PartnerScreen} />
-      <Tab.Screen name="Notifications" component={NotificationsScreen} />
-      <Tab.Screen name="Reveal" component={RevealScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
-      <Tab.Screen name="Settings" component={SettingsScreen} />
+      <Tab.Screen name="Tonight" component={TonightScreen} />
+      <Tab.Screen name="Rooms" component={RoomsScreen} />
+      <Tab.Screen name="Silent" component={SilentRoomScreen} />
+      <Tab.Screen name="Taste" component={TasteScreen} />
+      <Tab.Screen name="Match" component={MatchScreen} />
     </Tab.Navigator>
   );
 }
 
-function OnboardingFlow({ navigation }) {
-  const [screen, setScreen] = useState(0);
-  const [name, setName] = useState('');
-  const [intention, setIntention] = useState(null);
-  const TOTAL = 7;
-
-  const next = () => {
-    if (screen < TOTAL - 1) setScreen(s => s + 1);
-  };
-  const back = () => {
-    if (screen > 0) setScreen(s => s - 1);
-  };
-
-  const screenProps = { onNext: next, onBack: back, name, setName, intention, setIntention, pick: intention, setPick: setIntention };
-
-  const screens = [
-    <SplashScreen {...screenProps} />,
-    <PromiseScreen {...screenProps} />,
-    <NameScreen {...screenProps} />,
-    <IntentionScreen {...screenProps} />,
-    <ArchetypeTeaseScreen {...screenProps} />,
-    <PermissionsScreen {...screenProps} />,
-    <ReadyScreen {...screenProps} onFinish={() => navigation.navigate('Quiz', {
-      onComplete: (result) => navigation.replace('Result', result)
-    })} />,
-  ];
-
+function OnboardingFlow() {
   return (
-    <View style={{ flex: 1, backgroundColor: '#F9F8F4' }}>
-      {screen > 0 && screen < TOTAL && (
-        <View style={{ paddingHorizontal: 32, paddingTop: 28 }}>
-          <View style={{ height: 1, backgroundColor: '#E6E4DF', position: 'relative' }}>
-            <View style={{ height: '100%', backgroundColor: '#2B2A27', width: `${(screen / (TOTAL - 1)) * 100}%` }} />
-          </View>
-        </View>
-      )}
-      <View style={{ flex: 1 }} key={screen}>
-        {screens[screen]}
-      </View>
-    </View>
+    <OnboardStack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
+      <OnboardStack.Screen name="Splash" component={SplashScreenView} />
+      <OnboardStack.Screen name="Onboarding" component={OnboardingScreen} />
+    </OnboardStack.Navigator>
   );
 }
 
 function AppNavigator() {
   const { user, loading } = useAuth();
+  const [appReady, setAppReady] = useState(false);
 
-  if (loading) {
+  useEffect(() => {
+    SplashScreen.hideAsync().then(() => setAppReady(true));
+  }, []);
+
+  if (!appReady || loading) {
     return (
       <View style={{ flex: 1, backgroundColor: theme.bg, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator color={theme.roseL} size="large" />
+        <ActivityIndicator color={theme.lavender} size="large" />
       </View>
     );
   }
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.bg } }}>
+    <RootStack.Navigator screenOptions={{ headerShown: false }}>
       {user ? (
-        <>
-          <Stack.Screen name="Onboarding" component={OnboardingFlow} />
-          <Stack.Screen name="Quiz" component={QuizScreen} />
-          <Stack.Screen name="Result" component={ResultScreen} />
-          <Stack.Screen name="MainTabs" component={MainTabs} />
-        </>
+        <RootStack.Screen name="MainTabs" component={TabNav} />
       ) : (
-        <>
-          <Stack.Screen name="Landing" component={LandingScreen} />
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Register" component={RegisterScreen} />
-        </>
+        <RootStack.Screen name="OnboardingFlow" component={OnboardingFlow} />
       )}
-    </Stack.Navigator>
+    </RootStack.Navigator>
   );
 }
 
 export default function App() {
   return (
-    <AuthProvider>
-      <NavigationContainer>
-        <AppNavigator />
-        <StatusBar style="light" />
-      </NavigationContainer>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <NavigationContainer ref={navigationRef}>
+          <AppNavigator />
+          <StatusBar style="light" />
+        </NavigationContainer>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
+
+const tabStyles = StyleSheet.create({
+  iconWrap: { alignItems: 'center', gap: 2 },
+  tabLabel: { fontSize: 9, color: theme.textFaint, letterSpacing: 0.5 },
+  tabLabelActive: { color: theme.lavender, fontWeight: '600' },
+});

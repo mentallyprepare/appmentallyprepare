@@ -1,4 +1,7 @@
 const stmts = require('../../db');
+const webpush = require('web-push');
+const { sendNotificationEmail } = require('./email');
+const BASE_URL = process.env.BASE_URL || 'http://localhost:3005';
 
 const NOTIF_TYPES = {
   partner_entry: 'partner_entry',
@@ -24,6 +27,19 @@ function createNotification({ userId, type, title, body, data }) {
   if (!shouldNotify(userId, type)) return null;
   const dataStr = data ? JSON.stringify(data) : null;
   const result = stmts.insertNotification.run(userId, type, title, body, dataStr, new Date().toISOString());
+  // Send web-push if user has a subscription
+  try {
+    const user = stmts.getUserById.get(userId);
+    if (user?.push_subscription) {
+      const sub = JSON.parse(user.push_subscription);
+      const payload = JSON.stringify({ title, body, type, data: data || {}, url: BASE_URL + '/app' });
+      webpush.sendNotification(sub, payload).catch(err => {
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          stmts.db.prepare('UPDATE users SET push_subscription = ? WHERE id = ?').run(null, userId);
+        }
+      });
+    }
+  } catch {}
   return result.lastInsertRowid;
 }
 
@@ -48,6 +64,14 @@ function notifyPartnerComment(partnerId, entryDay, commentText) {
 }
 
 function notifyMatchFound(userId, partnerName) {
+  const user = stmts.getUserById.get(userId);
+  if (user?.email) {
+    sendNotificationEmail(user.email, 'You\'ve been matched!',
+      partnerName
+        ? `You're now connected with ${partnerName}. Day 1 starts now.\n\nWrite your first entry at ${BASE_URL}/app`
+        : 'A connection has been found for you. Day 1 starts now.\n\nWrite your first entry at ' + BASE_URL + '/app'
+    ).catch(() => {});
+  }
   return createNotification({
     userId,
     type: NOTIF_TYPES.match_found,
@@ -60,6 +84,12 @@ function notifyMatchFound(userId, partnerName) {
 }
 
 function notifyRevealAvailable(userId) {
+  const user = stmts.getUserById.get(userId);
+  if (user?.email) {
+    sendNotificationEmail(user.email, 'Day 21 — Choose your reveal',
+      'The journey is complete. Do you want to reveal your identity to your partner?\n\nMake your choice at ' + BASE_URL + '/app'
+    ).catch(() => {});
+  }
   return createNotification({
     userId,
     type: NOTIF_TYPES.reveal,

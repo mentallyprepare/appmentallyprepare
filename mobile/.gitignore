@@ -36,6 +36,14 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# Firebase (contains secret API keys)
+google-services.json
+GoogleService-Info.plist
+
+# EAS
+.eas/
+*.env
+
 # generated native folders
 /ios
 /android

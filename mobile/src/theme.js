@@ -1,33 +1,37 @@
 export const theme = {
-  bg: '#08050F',
-  card: '#0E0A18',
-  ink: '#F8F2FF',
-  inkM: 'rgba(248,242,255,0.62)',
-  inkS: 'rgba(248,242,255,0.35)',
-  line: 'rgba(248,242,255,0.07)',
-  rose: '#f7b7c8',
-  roseL: '#EBB4C2',
-  roseD: '#9B4F66',
-  gold: '#ecc885',
-  goldL: '#E8D0A0',
-  purple: '#896cb5',
-  purpleL: '#B09FCC',
-  green: '#659179',
+  bg: '#080714',
+  surface: 'rgba(255,255,255,0.03)',
+  border: 'rgba(255,255,255,0.06)',
+
+  lavender: 'rgba(200,180,255,0.85)',
+  lavenderDim: 'rgba(200,180,255,0.45)',
+  lavenderFaint: 'rgba(200,180,255,0.15)',
+
+  purple: '#7B5EA7',
+  purpleLight: '#B481BB',
+  purpleGradient: ['#7B5EA7', '#B481BB'],
+
+  blue: '#58B2DC',
+  teal: '#00AA90',
+  coral: '#F17C67',
+
+  text: 'rgba(255,255,255,0.88)',
+  textDim: 'rgba(255,255,255,0.5)',
+  textFaint: 'rgba(255,255,255,0.25)',
+
   fontSerif: 'Georgia',
-  fontSans: 'System',
-};
+  fontSans: 'Inter',
 
-export const moods = [
-  { emoji: '🌑', label: 'Heavy', value: 1 },
-  { emoji: '🌒', label: 'Quiet', value: 2 },
-  { emoji: '🌓', label: 'Okay', value: 3 },
-  { emoji: '🌔', label: 'Lighter', value: 4 },
-  { emoji: '🌕', label: 'Good', value: 5 },
-];
+  spacing: { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, '2xl': 48, '3xl': 64 },
+  borderRadius: { sm: 8, md: 14, lg: 20, xl: 28, full: 999 },
 
-export const archetypes = {
-  'The Quiet Storm': { icon: '🌊', color: '#4A90D9' },
-  'The Mirror Breaker': { icon: '🪞', color: '#D4859A' },
-  'The Night Architect': { icon: '🌙', color: '#896CB5' },
-  'The Depth Keeper': { icon: '🔮', color: '#659179' },
+  shadow: {
+    sm: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 8 },
+    md: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 16 },
+    glow: (color = '#7B5EA7') => ({ shadowColor: color, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.4, shadowRadius: 24 }),
+  },
+
+  animation: {
+    spring: { tension: 180, friction: 15 },
+  },
 };

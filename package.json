@@ -5,22 +5,48 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "mocha \"test/**/*.test.js\""
+    "start:prod": "NODE_ENV=production node server.js",
+    "backup": "powershell -File scripts/backup-db.ps1",
+    "test": "mocha \"test/**/*.test.js\"",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write \"src/**/*.js\" \"test/**/*.js\" \"server.js\" \"db.js\" \"public/sw.js\"",
+    "format:check": "prettier --check \"src/**/*.js\" \"test/**/*.js\" \"server.js\" \"db.js\" \"public/sw.js\"",
+    "docker:build": "docker build -t mentally-prepare .",
+    "docker:run": "docker run -p 3005:3005 --env-file .env mentally-prepare",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.js": [
+      "prettier --write",
+      "eslint --fix --max-warnings 0"
+    ]
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^12.6.2",
+    "compression": "^1.8.1",
+    "cors": "^2.8.6",
     "express": "^4.21.0",
-    "express-rate-limit": "^7.5.0",
+    "express-rate-limit": "^7.5.1",
     "express-session": "^1.18.1",
-    "helmet": "^8.1.0",
+    "express-validator": "^7.3.2",
+    "helmet": "^8.2.0",
+    "nodemailer": "^9.0.3",
     "razorpay": "^2.9.6",
+    "resend": "^6.17.1",
     "stripe": "^20.4.1",
     "web-push": "^3.6.7"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "chai": "^6.2.2",
+    "eslint": "^10.6.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.7.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.8",
     "mocha": "^11.7.6",
+    "prettier": "^3.9.4",
     "supertest": "^7.2.2"
   }
 }

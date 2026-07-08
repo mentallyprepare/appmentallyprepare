@@ -5,7 +5,13 @@ mentally-prepare.db-shm
 test/test-mentally-prepare.db
 test/test-mentally-prepare.db-wal
 test/test-mentally-prepare.db-shm
+test/*-admin.db
+test/*-admin.db-wal
+test/*-admin.db-shm
 backups/
 merged.html
 .vapid-keys.json
 .env
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/

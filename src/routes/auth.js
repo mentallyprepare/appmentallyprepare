@@ -3,6 +3,8 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const limiter = require('express-rate-limit');
 const stmts = require('../../db');
+const { sendPasswordReset } = require('../services/email');
+const validate = require('../middleware/validate');
 
 const router = express.Router();
 
@@ -35,8 +37,8 @@ router.post('/waitlist', (req, res) => {
   }
 });
 
-router.post('/register', async (req, res) => {
-  const { name, email, password, college, year, gender, match_pref_gender, match_pref_year, consentGiven } = req.body;
+router.post('/register', validate.register, async (req, res) => {
+  const { name, email, password, college, year, gender, consentGiven } = req.body;
   if (!consentGiven) return res.status(400).json({ error: 'Consent must be given' });
   const id = crypto.randomUUID();
   const password_hash = await bcrypt.hash(password, 12);
@@ -50,7 +52,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', validate.login, async (req, res) => {
   const { email, password } = req.body;
   const user = stmts.getUserByEmail.get(email);
   if (!user || !(await bcrypt.compare(password, user.password_hash))) {
@@ -60,28 +62,25 @@ router.post('/login', async (req, res) => {
   res.json({ status: 'ok', user: { id: user.id, name: user.name, email: user.email } });
 });
 
-router.post('/forgot-password', rateLimiter, (req, res) => {
+router.post('/forgot-password', rateLimiter, validate.forgotPassword, (req, res) => {
   try {
     const { email } = req.body;
-    if (!email) return res.status(400).json({ error: 'Email is required' });
     const user = stmts.getUserByEmail.get(email.toLowerCase().trim());
     if (!user) return res.json({ ok: true, message: 'If that email exists, a reset code has been generated.' });
     const token = crypto.randomBytes(32).toString('hex');
     resetTokens.set(token, { userId: user.id, expires: Date.now() + 15 * 60 * 1000 });
-    console.log(`  ✉ Password reset token for ${user.email}: ${token}`);
-    res.json({ ok: true, message: 'If that email exists, a reset link has been generated.' });
+    sendPasswordReset(user.email, token).catch(e => console.error('Email send failed:', e));
+    res.json({ ok: true, message: 'If that email exists, a reset link has been sent.' });
   } catch (e) {
     console.error('Forgot password error:', e);
     res.status(500).json({ error: 'Something went wrong' });
   }
 });
 
-router.post('/reset-password', rateLimiter, async (req, res) => {
+router.post('/reset-password', rateLimiter, validate.resetPassword, async (req, res) => {
   try {
     const { code, newPassword } = req.body;
     const token = code;
-    if (!token || !newPassword) return res.status(400).json({ error: 'Token and new password are required' });
-    if (newPassword.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
     const entry = resetTokens.get(token);
     if (!entry || entry.expires < Date.now()) {
       if (token) resetTokens.delete(token);
@@ -100,3 +99,4 @@ router.post('/reset-password', rateLimiter, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.resetTokens = resetTokens;

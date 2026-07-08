@@ -30,7 +30,7 @@ router.post('/razorpay/create', (req, res) => {
         keyId: process.env.RAZORPAY_KEY_ID,
         paymentId: Number(result.lastInsertRowid)
       });
-    }).catch(err => {
+    }).catch(() => {
       res.status(500).json({ error: 'Failed to create order' });
     });
   } catch (e) {
@@ -107,7 +107,7 @@ router.post('/stripe/webhook', express.raw({ type: 'application/json' }), (req, 
     let event;
     try {
       event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
-    } catch (err) {
+    } catch {
       return res.status(400).send('Webhook signature verification failed');
     }
     if (event.type === 'checkout.session.completed') {
@@ -130,7 +130,7 @@ router.get('/history', (req, res) => {
     const payments = stmts.getUserPayments.all(req.session.userId)
       .map(p => ({ id: p.id, product: p.product, amount: p.amount, currency: p.currency, status: p.status, provider: p.provider, created_at: p.created_at }));
     res.json({ payments });
-  } catch (e) {
+  } catch {
     res.status(500).json({ error: 'Failed to load payment history' });
   }
 });
